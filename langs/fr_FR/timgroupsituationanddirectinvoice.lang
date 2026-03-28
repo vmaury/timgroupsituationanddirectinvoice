@@ -1,0 +1,42 @@
+# Translation file
+
+#
+# Generic
+#
+
+# Module label 'ModuleTimgroupsituationanddirectinvoiceName'
+ModuleTimgroupsituationanddirectinvoiceName = Timgroup - Fac Situation/Direct
+# Module description 'ModuleTimgroupsituationanddirectinvoiceDesc'
+ModuleTimgroupsituationanddirectinvoiceDesc = Facture de situation et paiements directs fournisseur
+
+#
+# Situation
+#
+NoSituations=Pas de situations ouvertes
+InvoiceSituationLast=Dernière facture
+InvoiceSituationLast=Dernière facture
+SituationInvoiceAmountColTitle=Montant (net)
+SituationInvoiceProgressColTitle=Progression
+SituationInvoiceDate=Date facture situation
+SituationInvoiceTotalProposal=Devis de la facture de situation
+SituationInvoiceOldCumulation=Ancien cumul
+SituationInvoiceNewCumulation=Nouveau cumul
+SituationInvoiceMainTask=Tâche principale
+SituationInvoiceAdditionalTask=Tâche supplémentaire
+PDFOctopusSituationNumber=Situation N°%s
+PDFOctopusSituationInvoiceLineDecompte=Facture de situation - Décompte
+PDFOctopusSituationInvoiceTitle=Facture de situation
+PDFOctopusSituationInvoiceLine=Situation N°%s : Fact. N°%s sur %s
+TotalSituationInvoice=Total situation
+TotalSituationInvoiceWithRetainedWarranty=Total maintien de la garantie (TTC)
+
+#
+# Factures directes
+#
+NetToPayOn=Net à payer le %s
+DirectPaymentTitle=Paiements directs aux fournisseurs
+NoSupplierInvoiceFound=Aucune facture fournisseur trouvée pour ce projet
+SelectSupplierInvoices=Sélectionnez les factures fournisseur en paiement direct
+DirectPaymentTo=Paiement direct à
+DirectPayments=Paiements directs
+TotalDirectPayments=Total des paiements directs

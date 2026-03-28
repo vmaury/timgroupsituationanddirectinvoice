@@ -1,0 +1,40 @@
+# Translation file
+
+#
+# Generic
+#
+
+# Module label 'ModuleTimgroupsituationanddirectinvoiceName'
+ModuleTimgroupsituationanddirectinvoiceName = Timgroupsituationanddirectinvoice
+# Module description 'ModuleTimgroupsituationanddirectinvoiceDesc'
+ModuleTimgroupsituationanddirectinvoiceDesc = Timgroupsituationanddirectinvoice description
+
+#
+# Situation
+#
+NoSituations=No open situations
+InvoiceSituationLast=Final and general invoice
+SituationInvoiceAmountColTitle=Amount(net)
+SituationInvoiceProgressColTitle=Progress
+SituationInvoiceDate=Date invoice situation
+SituationInvoiceTotalProposal=Proposal of invoice situation
+SituationInvoiceOldCumulation=Old cumulation
+SituationInvoiceNewCumulation=New cumulation
+SituationInvoiceMainTask=Main task
+SituationInvoiceAdditionalTask=Additional task
+PDFOctopusSituationNumber=Situation N°%s
+PDFOctopusSituationInvoiceLineDecompte=Situation invoice - COUNT
+PDFOctopusSituationInvoiceTitle=Situation invoice
+PDFOctopusSituationInvoiceLine=Situation N°%s: Inv. N°%s on %s
+TotalSituationInvoice=Total situation
+TotalSituationInvoiceWithRetainedWarranty=Total (incl. tax) with retained warranty
+
+#
+# Factures
+#
+NetToPayOn=Net to pay on %s
+DirectPaymentTitle=Direct payments to suppliers
+NoSupplierInvoiceFound=No supplier invoice found for this project
+SelectSupplierInvoices=Select the supllier invoices in direct payment
+DirectPaymentTo=Direct payment to
+TotalDirectPayments=Total direct payments
