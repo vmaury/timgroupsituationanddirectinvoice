@@ -2153,10 +2153,17 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 		$pdf->SetTextColor(0, 0, 0);
 
 		$resteapayer = 0;
-		/*
-		  $resteapayer = $object->total_ttc - $deja_regle;
-		  if (! empty($object->paye)) $resteapayer=0;
-		 */
+		$creditnoteamount = $object->getSumCreditNotesUsed((isModEnabled("multicurrency") && $object->multicurrency_tx != 1) ? 1 : 0);
+		$depositsamount = $object->getSumDepositsUsed((isModEnabled("multicurrency") && $object->multicurrency_tx != 1) ? 1 : 0);
+		$retainedWarrantyAmount = $object->getRetainedWarrantyAmount();
+		if ($retainedWarrantyAmount < 0) {
+			$retainedWarrantyAmount = 0;
+		}
+
+		$resteapayer = price2num($total_ttc - $deja_regle - $retainedWarrantyAmount - $creditnoteamount - $depositsamount, 'MT');
+		if (!empty($object->paye)) {
+			$resteapayer = 0;
+		}
 
 		if ($deja_regle > 0) {
 			// Already paid + Deposits
@@ -3923,7 +3930,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 		$depositsamount = $object->getSumDepositsUsed();
 		$deja_regle = $object->getSommePaiement();
 
-		$tot_deja_regle = ($depositsamount + $deja_regle);
+		$tot_deja_regle = 0;
 		$tot_to_pay_ttc = 0;
 
 		$previousinvoices[] = $object;
@@ -3998,7 +4005,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 			$tvas = array();
 			$nblines = count($invoice->lines);
 			for ($i = 0; $i < $nblines; $i++) {
-				$tvaligne = $invoice->lines[$i]->multicurrency_total_tva; // total_tva est FAUX (*100) 
+				$tvaligne = $invoice->lines[$i]->multicurrency_total_tva; // total_tva est FAUX (*100)
 				$vatrate = (string) $invoice->lines[$i]->tva_tx;
 
 				if (($invoice->lines[$i]->info_bits & 0x01) == 0x01) {
