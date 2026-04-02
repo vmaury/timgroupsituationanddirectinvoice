@@ -1196,13 +1196,41 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 						$pdfMerged->useTemplate($tplIdx);
 					}
 
-					// Ajouter les PDF fournisseurs à la suite
+					// Ajouter les PDF des factures fournisseurs à la suite
 					foreach ($directInvoices as $dirInv) {
 						$facfourn = new FactureFournisseur($db);
 						$facfourn->fetch($dirInv->fk_facture_fournisseur);
-						$fileFournPDF = DOL_DATA_ROOT . '/' . $facfourn->last_main_doc;
-
-						// Créer le pdf de la facture fournisseur s'il n'existe pas
+						//$facfourn->generateDocument($facfourn->model_pdf, $langs); // on bétonne on regénère : non, ça sert à rien, l'espèce de pro-forma Dolibarr elle sert à rien.
+						// D'ailleurs par défaut, aucun modèle de facture fournisseur n'est activé .. pour ça.
+						$subdir = get_exdir($facfourn->id, 2, 0, 0, $facfourn, 'invoice_supplier').dol_sanitizeFileName($facfourn->ref);
+						$filedir = $conf->fournisseur->facture->dir_output.'/'.$subdir;
+											
+						// Build file list
+						$filearray = dol_dir_list($filedir, "files", 0, '\.pdf', '_preview');
+						//print_r($filearray);
+						/* Array ( [0] => Array ( 
+									[name] => SI2507-1765-FC 2025 07 0398.pdf 
+									[path] => /volume1/Dolilarbre/dolilarbre-test-v22/documents/fournisseur/facture/2/1/SI2507-1765 
+									[level1name] => SI2507-1765 
+									[relativename] => SI2507-1765-FC 2025 07 0398.pdf 
+									[fullname] => /volume1/Dolilarbre/dolilarbre-test-v22/documents/fournisseur/facture/2/1/SI2507-1765/SI2507-1765-FC 2025 07 0398.pdf 
+									[date] => 
+									[size] => 
+									[type] => file 
+									)
+								) */
+						foreach($filearray as $filprop) {
+							$pagesFourn = $pdfMerged->setSourceFile($filprop['fullname']);
+							for ($p = 1; $p <= $pagesFourn; $p++) {
+								$tplIdx = $pdfMerged->importPage($p);
+								$size = $pdfMerged->getTemplatesize($tplIdx);
+								$pdfMerged->AddPage($size['h'] > $size['w'] ? 'P' : 'L');
+								$pdfMerged->useTemplate($tplIdx);
+							}
+						}
+						/* Supprimé par Vince
+						$fileFournPDF = DOL_DATA_ROOT . '/' . $facfourn->last_main_doc; // NAN C'est plus bon ça faut utiliser le $filedir ci-dessus
+						// Créer le pdf de la facture fournisseur s'il n'existe pas: non, ça sert à rien, l'espèce de pro-forma Dolibarr elle sert à rien.
 						if (!file_exists($fileFournPDF)) {
 							$dir = dirname($fileFournPDF);
 							if (!is_dir($dir)) {
@@ -1222,11 +1250,10 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 								$pdfMerged->AddPage($size['h'] > $size['w'] ? 'P' : 'L');
 								$pdfMerged->useTemplate($tplIdx);
 							}
-						}
+						} */
 					}
 
-					if (method_exists($pdfMerged, 'AliasNbPages'))
-						$pdfMerged->AliasNbPages();
+					if (method_exists($pdfMerged, 'AliasNbPages'))	$pdfMerged->AliasNbPages();
 					$pdfMerged->Close();
 					$pdfMerged->Output($file, 'F');
 				}
@@ -4005,7 +4032,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 			$tvas = array();
 			$nblines = count($invoice->lines);
 			for ($i = 0; $i < $nblines; $i++) {
-				$tvaligne = $invoice->lines[$i]->multicurrency_total_tva; // total_tva est FAUX (*100)
+				$tvaligne = $invoice->lines[$i]->total_tva;
 				$vatrate = (string) $invoice->lines[$i]->tva_tx;
 
 				if (($invoice->lines[$i]->info_bits & 0x01) == 0x01) {
