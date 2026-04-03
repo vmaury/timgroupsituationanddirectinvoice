@@ -28,7 +28,7 @@ PDFOctopusSituationInvoiceLineDecompte=Facture de situation - Décompte
 PDFOctopusSituationInvoiceTitle=Facture de situation
 PDFOctopusSituationInvoiceLine=Situation N°%s : Fact. N°%s sur %s
 TotalSituationInvoice=Total situation
-TotalSituationInvoiceWithRetainedWarranty=Total maintien de la garantie (TTC)
+SituationInvoiceWithRetainedWarranty=Retenue de garantie (%s% TTC)
 
 #
 # Factures directes

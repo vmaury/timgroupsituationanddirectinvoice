@@ -1204,7 +1204,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 						// D'ailleurs par défaut, aucun modèle de facture fournisseur n'est activé .. pour ça.
 						$subdir = get_exdir($facfourn->id, 2, 0, 0, $facfourn, 'invoice_supplier').dol_sanitizeFileName($facfourn->ref);
 						$filedir = $conf->fournisseur->facture->dir_output.'/'.$subdir;
-											
+				
 						// Build file list
 						$filearray = dol_dir_list($filedir, "files", 0, '\.pdf', '_preview');
 						//print_r($filearray);
@@ -3300,11 +3300,15 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 
 		if ($displayWarranty && $fournInvoices["nouveau_cumul"] == 0) {
 			$pdf->SetXY($this->marge_gauche + 2, $tab_top + 74);
-			$pdf->MultiCell(80, 2, $outputlangs->trans("TotalSituationInvoiceWithRetainedWarranty", (string) $object->retained_warranty), '', '');
+			$pdf->MultiCell(80, 2, $outputlangs->trans("SituationInvoiceWithRetainedWarranty", (string) $object->retained_warranty), '', '');
 			$nextY = $tab_top + 93;
-		} else if ($displayWarranty) {
+		} elseif (!$displayWarranty && $fournInvoices["nouveau_cumul"] != 0) {
+			$pdf->SetXY($this->marge_gauche + 2, $tab_top + 74);
+			$pdf->MultiCell(80, 2, $outputlangs->trans("TotalDirectPayments"), '', 'L');
+			$nextY = $tab_top + 93;
+		} elseif ($displayWarranty && $fournInvoices["nouveau_cumul"] != 0) {
 			$pdf->SetXY($this->marge_gauche + 2, $tab_top + 69);
-			$pdf->MultiCell(80, 2, $outputlangs->trans("TotalSituationInvoiceWithRetainedWarranty", (string) $object->retained_warranty), '', '');
+			$pdf->MultiCell(80, 2, $outputlangs->trans("SituationInvoiceWithRetainedWarranty", (string) $object->retained_warranty), '', '');
 			// --- Direct Payments juste après le bloc précédent ---
 			$pdf->SetXY($this->marge_gauche + 2, $tab_top + 76);
 			$pdf->MultiCell(80, 2, $outputlangs->trans("TotalDirectPayments"), '', 'L');
@@ -3379,7 +3383,11 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 				$pdf->SetXY($x, $tab_top + 74);
 				$pdf->MultiCell(32, 2, price(-$this->TDataSituation[$col]['retenue_garantie'], 0, '', 1, -1, 2), '', 'R');
 				$nextY = $tab_top + 93;
-			} else if ($displayWarranty) {
+			} elseif (!$displayWarranty && $fournInvoices["nouveau_cumul"] != 0) {
+				$pdf->SetXY($x, $tab_top + 74);
+				$pdf->MultiCell(32, 2, price($fournInvoices[$col], 0, '', 1, -1, 2), '', 'R');
+				$nextY = $tab_top + 93;
+			} elseif ($displayWarranty && $fournInvoices["nouveau_cumul"] != 0) {
 				$pdf->SetXY($x, $tab_top + 69);
 				$pdf->MultiCell(32, 2, price(-$this->TDataSituation[$col]['retenue_garantie'], 0, '', 1, -1, 2), '', 'R');
 				// --- Direct Payments juste après le bloc précédent ---
@@ -4108,7 +4116,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 				$pdf->SetXY($posx, $posy + $height * $index);
 				$pdf->SetTextColor(0, 0, 60);
 				$pdf->SetFillColor(224, 224, 224);
-				$pdf->MultiCell($width, $height, $outputlangs->transnoentities("TotalSituationInvoiceWithRetainedWarranty"), $useborder, 'L', true);
+				$pdf->MultiCell($width, $height, $outputlangs->transnoentities("SituationInvoiceWithRetainedWarranty"), $useborder, 'L', true);
 
 				$pdf->SetXY($posx + $width, $posy + $height * $index);
 				$pdf->MultiCell($width2, $height, price($sign * $total_ttc_with_rg, 0, $outputlangs), $useborder, 'R', true);

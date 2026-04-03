@@ -27,7 +27,7 @@ PDFOctopusSituationInvoiceLineDecompte=Situation invoice - COUNT
 PDFOctopusSituationInvoiceTitle=Situation invoice
 PDFOctopusSituationInvoiceLine=Situation N°%s: Inv. N°%s on %s
 TotalSituationInvoice=Total situation
-TotalSituationInvoiceWithRetainedWarranty=Total (incl. tax) with retained warranty
+SituationInvoiceWithRetainedWarranty=Retained warranty (%s% incl. tax)
 
 #
 # Factures
