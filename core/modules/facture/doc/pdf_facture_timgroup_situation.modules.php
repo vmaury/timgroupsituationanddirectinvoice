@@ -168,6 +168,30 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 	public $tplidx;
 
 	/**
+	 * 
+	 * @var array
+	 */
+	public $propals = [];
+
+	/**
+	 * 
+	 * @var array
+	 */
+	public $orders = [];
+	
+	/**
+	 * 
+	 * @var float
+	 */
+	public $total_marche_ht = 0;
+
+	/**
+	 * 
+	 * @var float
+	 */
+	public $total_marche_ttc = 0;
+	
+	/**
 	 * 	Constructor
 	 *
 	 *  @param		DoliDB		$db      Database handler
@@ -3222,9 +3246,21 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 			$posyafter = $pdf->GetY();
 			$tab_top += $posyafter - $posybefore + 2;
 		}
+		
+		// affichage du montant du marché total
+		$this->getPropalsAndOrders($object);
+		
+		
+		$tab_top -= 2;
+		$posybefore = $pdf->GetY();
+		$pdf->SetFont('', '', $default_font_size);
+		$pdf->writeHTMLCell(190, 3, $this->posxdesc - 1, $tab_top, $outputlangs->transnoentities("SituationInvoiceMontantMarche", price($this->total_marche_ht), price($this->total_marche_ttc)), 0, 1);
+		$posyafter = $pdf->GetY();
+		$tab_top += $posyafter - $posybefore + 2;
 
 		// Output Rect
 		// KEEPTHIS => Affiche les bords extérieurs
+		$pdf->SetFont('', '', $default_font_size - 1);
 		$this->printRoundedRectBtp($pdf, $this->marge_gauche, $tab_top, $this->page_largeur - $this->marge_gauche - $this->marge_droite, $tab_height, $this->corner_radius, $hidetop, $hidebottom, 'D'); // Rect prend une longueur en 3eme param et 4eme param
 
 		$pdf->line($this->posx_cumul_anterieur - 1, $tab_top, $this->posx_cumul_anterieur - 1, $tab_top + $tab_height);
@@ -3606,6 +3642,48 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 
 		return $TDataSituation;
 	}
+	
+	/** fetch propals and orders linked to the situation
+	 *  calculate $this->total_marche_ht and $this->total_marche_ttc
+	 * 
+	 * @param type $object
+	 */
+	public function getPropalsAndOrders(&$object) {
+		
+		if (empty($object->tab_previous_situation_invoice)) {
+			$object->fetchPreviousNextSituationInvoice();
+		}
+
+		$previousinvoices = count($object->tab_previous_situation_invoice) ? $object->tab_previous_situation_invoice : array();
+
+		if (count($previousinvoices)) {
+			foreach ($previousinvoices as $invoice) {
+				if ($invoice->is_first()) {
+					$invoice->fetchObjectLinked();
+
+					$this->propals = isset($invoice->linkedObjects['propal']) ? $invoice->linkedObjects['propal'] : array();
+					$this->orders = isset($invoice->linkedObjects['commande']) ? $invoice->linkedObjects['commande'] : array();
+				}
+			}
+		} else {
+			if ($object->is_first()) {
+				$object->fetchObjectLinked();
+
+				$this->propals = isset($object->linkedObjects['propal']) ? $object->linkedObjects['propal'] : array();
+				$this->orders = isset($object->linkedObjects['commande']) ? $object->linkedObjects['commande'] : array();
+			}
+		}
+		
+		if (count($this->propals)) {
+			$propal = array_pop($this->propals);
+			$this->total_marche_ht = (isModEnabled('multicurrency') && $propal->multicurrency_tx != 1) ? $propal->multicurrency_total_ht : $propal->total_ht;
+			$this->total_marche_ttc = (isModEnabled('multicurrency') && $propal->multicurrency_tx != 1) ? $propal->multicurrency_total_ttc : $propal->total_ttc;
+		} elseif (count($this->orders)) {
+			$order = array_pop($this->orders);
+			$this->total_marche_ht = (isModEnabled('multicurrency') && $order->multicurrency_tx != 1) ? $order->multicurrency_total_ht : $order->total_ht;
+			$this->total_marche_ttc = (isModEnabled('multicurrency') && $order->multicurrency_tx != 1) ? $order->multicurrency_total_ttc : $order->total_ttc;
+		}
+	}
 
 	/**
 	 * Calculates the sum of two arrays, key by key, taking into account nested arrays
@@ -3889,38 +3967,10 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 			$pdf->SetFont('', '', $default_font_size - 1);
 		}
 
-		if (empty($object->tab_previous_situation_invoice)) {
-			$object->fetchPreviousNextSituationInvoice();
-		}
+		$this->getPropalsAndOrders($object);
 
-		$previousinvoices = count($object->tab_previous_situation_invoice) ? $object->tab_previous_situation_invoice : array();
-
-		$remain_to_pay = 0;
-
-		// Proposal total
-		$propals = array();
-		$orders = array();
-
-		if (count($previousinvoices)) {
-			foreach ($previousinvoices as $invoice) {
-				if ($invoice->is_first()) {
-					$invoice->fetchObjectLinked();
-
-					$propals = isset($invoice->linkedObjects['propal']) ? $invoice->linkedObjects['propal'] : array();
-					$orders = isset($invoice->linkedObjects['commande']) ? $invoice->linkedObjects['commande'] : array();
-				}
-			}
-		} else {
-			if ($object->is_first()) {
-				$object->fetchObjectLinked();
-
-				$propals = isset($object->linkedObjects['propal']) ? $object->linkedObjects['propal'] : array();
-				$orders = isset($object->linkedObjects['commande']) ? $object->linkedObjects['commande'] : array();
-			}
-		}
-
-		if (count($propals)) {
-			$propal = array_pop($propals);
+		if (count($this->propals)) {
+			$propal = array_pop($this->propals);
 
 			$total_ht = (isModEnabled('multicurrency') && $propal->multicurrency_tx != 1) ? $propal->multicurrency_total_ht : $propal->total_ht;
 			$remain_to_pay = $total_ht;
@@ -3942,8 +3992,8 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 			$this->printRoundedRect($pdf, $posx, $posy, $this->page_largeur - $this->marge_gauche - $this->marge_droite, 6, $this->corner_radius, 0, 0, 'D'); // Rect takes a length in 3rd parameter and 4th parameter
 
 			$posy += 4;
-		} elseif (count($orders)) {
-			$order = array_pop($orders);
+		} elseif (count($this->orders)) {
+			$order = array_pop($this->orders);
 
 			$total_ht = (isModEnabled('multicurrency') && $order->multicurrency_tx != 1 ? $order->multicurrency_total_ht : $order->total_ht);
 			$remain_to_pay = $total_ht;
@@ -3968,12 +4018,13 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 		$tot_deja_regle = 0;
 		$tot_to_pay_ttc = 0;
 
-		$previousinvoices[] = $object;
-
 		$force_to_zero = false;
 
 		$idinv = 0; //count($previousinvoices);
 		$total_percent = 0;
+		
+		$previousinvoices = count($object->tab_previous_situation_invoice) ? $object->tab_previous_situation_invoice : array();
+		$previousinvoices[] = $object;
 
 		while ($idinv < count($previousinvoices)) {
 			$invoice = $previousinvoices[$idinv];

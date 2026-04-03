@@ -28,6 +28,7 @@ PDFOctopusSituationInvoiceTitle=Situation invoice
 PDFOctopusSituationInvoiceLine=Situation N°%s: Inv. N°%s on %s
 TotalSituationInvoice=Total situation
 SituationInvoiceWithRetainedWarranty=Retained warranty (%s% incl. tax)
+SituationInvoiceMontantMarche=Total project budget : %s (%s incl. tax)
 
 #
 # Factures
