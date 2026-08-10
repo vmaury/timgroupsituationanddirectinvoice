@@ -8,6 +8,7 @@
 ModuleTimgroupsituationanddirectinvoiceName = Timgroup - Fac Situation/Direct
 # Module description 'ModuleTimgroupsituationanddirectinvoiceDesc'
 ModuleTimgroupsituationanddirectinvoiceDesc = Facture de situation et paiements directs fournisseur
+TIMGROUPSITUATIONANDDIRECTINVOICE_HIDETRAVAUXSUP = Masquer la ligne "travaux supplémentaires" dans le pdf
 
 #
 # Situation

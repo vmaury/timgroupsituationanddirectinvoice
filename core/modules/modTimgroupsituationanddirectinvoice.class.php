@@ -46,7 +46,7 @@ class modTimgroupsituationanddirectinvoice extends DolibarrModules
 		$this->db = $db;
 		$this->numero = 900124;
 		$this->rights_class = 'timgroupsituationanddirectinvoice';
-		$this->family = "other";
+		$this->family = "financial";
 		$this->module_position = '90';
 		$this->name = preg_replace('/^mod/i', '', get_class($this));
 		$this->description = "TimgroupsituationanddirectinvoiceDescription";
@@ -96,7 +96,7 @@ class modTimgroupsituationanddirectinvoice extends DolibarrModules
 			'captcha' => 0
 		);
 		$this->dirs = array("/timgroupsituationanddirectinvoice/temp");
-		// $this->config_page_url = array("setup.php@timgroupsituationanddirectinvoice");
+		$this->config_page_url = array("setup.php@timgroupsituationanddirectinvoice");
 		$this->hidden = getDolGlobalInt('MODULE_TIMGROUPSITUATIONANDDIRECTINVOICE_DISABLED');
 		$this->depends = array('modFacture');
 		$this->requiredby = array();
@@ -133,6 +133,11 @@ class modTimgroupsituationanddirectinvoice extends DolibarrModules
 	public function init($options = '')
 	{
 		global $conf, $langs;
+		
+		$langs->loadLangs(array('timgroupsituationanddirectinvoice@timgroupsituationanddirectinvoice'));
+
+		$extrafields = new ExtraFields($this->db);
+        $extrafields->addExtraField('dirpaytotht', $langs->trans("TotalDirectPayments"), 'price', 25, null, 'facture', 0, 0, '', 0, 0, '', 1, 0);
 
 		$sql = array();
 

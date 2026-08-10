@@ -8,6 +8,7 @@ class ActionsTimgroupsituationanddirectinvoice
 		global $db, $langs, $conf;
 
 		if (get_class($object) != 'Facture') return 0;
+		/* @var $object Facture */
 		if (empty($object->fk_project)) return 0;
 
 		$langs->load("timgroupsituationanddirectinvoice@timgroupsituationanddirectinvoice");
@@ -90,7 +91,7 @@ class ActionsTimgroupsituationanddirectinvoice
 		print '<th class="right">'.$langs->trans("AmountTTC").'</th>';
 		print '<th class="center">'.$langs->trans("Action").'</th>';
 		print '</tr></thead><tbody>';
-
+		$dirpaytotht = 0;
 		if (!empty($linked_ids)) {
 			$sqlf = "SELECT f.rowid, f.ref, f.ref_supplier, f.paye, f.fk_statut, f.total_ht, f.total_tva, f.total_ttc, s.nom as supplier_name
 					FROM ".MAIN_DB_PREFIX."facture_fourn f
@@ -109,9 +110,14 @@ class ActionsTimgroupsituationanddirectinvoice
 				$delete_link = $_SERVER['PHP_SELF'].'?id='.$object->id.'&action=remove_directinvoice&fk_fourn='.$objf->rowid.'&token='.newToken().'#timgroup-directinvoices';
         		print '<td class="center"><a href="'.$delete_link.'" class="butActionDelete small">'.$langs->trans("Delete").'</a></td>';
 				print '</tr>';
+				$dirpaytotht += $objf->total_ht;
 			}
 		} else {
 			print '<tr class="oddeven"><td colspan="8" class="center"></td></tr>';
+		}
+		if ($object->array_options['options_dirpaytotht'] != $dirpaytotht) {
+			$object->array_options['options_dirpaytotht'] = price($dirpaytotht);
+			$object->updateExtraField('dirpaytotht');
 		}
 
 		print '</tbody></table></div>';
@@ -140,6 +146,24 @@ class ActionsTimgroupsituationanddirectinvoice
 			});
 		</script>';
 
+		// rajoute une case à cocher permettant de masquer l'historique lors de la génération des factures de situation
+		$hidehistofs = false;
+        $this->resprints = '<div style="display:inline" id="divhidehistofs">Masquer historique d&ns facture de situation '
+			. '<input type="checkbox" value="1" name="hidehistofs" id="hidehistofs" '.($hidehistofs ? ' checked="checked" ' : '').' />'
+			. '</div>';
+		$this->resprints .= '<script>'
+				. 'function tglaffhidehistofs() {'
+					. 'if ($("select#model").val() != "facture_timgroup_situation") {'
+						. '$("#divhidehistofs").hide(); '
+					. '} else $("#divhidehistofs").show(); '
+				. '};'
+				. '$(document).ready(function() {'
+					. 'tglaffhidehistofs();'
+					. '$("select#model").on("change", function() {'
+						. 'tglaffhidehistofs();'
+					. '});'
+				. '});'
+				. '</script>';
 		return 0;
 	}
 

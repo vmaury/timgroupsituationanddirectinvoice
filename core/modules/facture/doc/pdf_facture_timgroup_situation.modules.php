@@ -631,150 +631,6 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 						$height_incoterms += 4;
 					}
 				}
-
-				//				// Displays notes. Here we are still on code executed only for the first page.
-				//				$notetoshow = empty($object->note_public) ? '' : $object->note_public;
-				//				if (getDolGlobalString('MAIN_ADD_SALE_REP_SIGNATURE_IN_NOTE')) {
-				//					// Get first sale rep
-				//					if (is_object($object->thirdparty)) {
-				//						$salereparray = $object->thirdparty->getSalesRepresentatives($user);
-				//						$salerepobj = new User($this->db);
-				//						$salerepobj->fetch($salereparray[0]['id']);
-				//						if (!empty($salerepobj->signature)) {
-				//							$notetoshow = dol_concatdesc($notetoshow, $salerepobj->signature);
-				//						}
-				//					}
-				//				}
-				//
-				//				// Extrafields in note
-				//				$extranote = $this->getExtrafieldsInHtml($object, $outputlangs);
-				//				if (!empty($extranote)) {
-				//					$notetoshow = dol_concatdesc((string) $notetoshow, $extranote);
-				//				}
-				//
-				//				$pagenb = $pdf->getPage();
-				//				if ($notetoshow) {
-				//					$this->tab_top -= 2;
-				//
-				//					$tab_width = $this->page_largeur - $this->marge_gauche - $this->marge_droite;
-				//					$pageposbeforenote = $pagenb;
-				//
-				//					$substitutionarray = pdf_getSubstitutionArray($outputlangs, null, $object);
-				//					complete_substitutions_array($substitutionarray, $outputlangs, $object);
-				//					$notetoshow = make_substitutions($notetoshow, $substitutionarray, $outputlangs);
-				//					$notetoshow = convertBackOfficeMediasLinksToPublicLinks($notetoshow);
-				//
-				//					$pdf->startTransaction();
-				//
-				//					$pdf->SetFont('', '', $default_font_size - 1);
-				//					$pdf->writeHTMLCell(190, 3, $this->posxdesc - 1, $this->tab_top, dol_htmlentitiesbr($notetoshow), 0, 1);
-				//					// Description
-				//					$pageposafternote = $pdf->getPage();
-				//					$posyafter = $pdf->GetY();
-				//
-				//					if ($pageposafternote > $pageposbeforenote) {
-				//						$pdf->rollbackTransaction(true);
-				//
-				//						// prepare pages to receive notes
-				//						while ($pagenb < $pageposafternote) {
-				//							$pdf->AddPage();
-				//							$pagenb++;
-				//							if (!empty($this->tplidx)) {
-				//								$pdf->useTemplate($this->tplidx);
-				//							}
-				//							if (!getDolGlobalInt('MAIN_PDF_DONOTREPEAT_HEAD')) {
-				//								$this->_pagehead($pdf, $object, 0, $outputlangs, $outputlangsbis);
-				//							}
-				//							$pdf->setTopMargin($this->tab_top_newpage);
-				//							// The only function to edit the bottom margin of current page to set it.
-				//							$pdf->setPageOrientation('', true, $this->heightforfooter + $this->heightforfreetext);
-				//						}
-				//
-				//						// back to start
-				//						$pdf->setPage($pageposbeforenote);
-				//						$pdf->setPageOrientation('', true, $this->heightforfooter + $this->heightforfreetext);
-				//						$pdf->SetFont('', '', $default_font_size - 1);
-				//						$pdf->writeHTMLCell(190, 3, $this->posxdesc - 1, $this->tab_top, dol_htmlentitiesbr($notetoshow), 0, 1);
-				//						$pageposafternote = $pdf->getPage();
-				//
-				//						$posyafter = $pdf->GetY();
-				//
-				//						if ($posyafter > ($this->page_hauteur - ($this->heightforfooter + $this->heightforfreetext + 20))) {	// There is no space left for total+free text
-				//							$pdf->AddPage('', '', true);
-				//							$pagenb++;
-				//							$pageposafternote++;
-				//							$pdf->setPage($pageposafternote);
-				//							$pdf->setTopMargin($this->tab_top_newpage);
-				//							// The only function to edit the bottom margin of current page to set it.
-				//							$pdf->setPageOrientation('', true, $this->heightforfooter + $this->heightforfreetext);
-				//							//$posyafter = $this->tab_top_newpage;
-				//						}
-				//
-				//
-				//						// apply note frame to previous pages
-				//						$i = $pageposbeforenote;
-				//						while ($i < $pageposafternote) {
-				//							$pdf->setPage($i);
-				//
-				//
-				//							$pdf->SetDrawColor(128, 128, 128);
-				//							// Draw note frame
-				//							if ($i > $pageposbeforenote) {
-				//								$height_note = $this->page_hauteur - ($this->tab_top_newpage + $this->heightforfooter);
-				//								$pdf->RoundedRect($this->marge_gauche, $this->tab_top_newpage - 1, $tab_width, $height_note + 2, $this->corner_radius, '1234', 'D');
-				//							} else {
-				//								$height_note = $this->page_hauteur - ($this->tab_top + $this->heightforfooter);
-				//								$pdf->RoundedRect($this->marge_gauche, $this->tab_top - 1, $tab_width, $height_note + 2, $this->corner_radius, '1234', 'D');
-				//							}
-				//
-				//							// Add footer
-				//							$pdf->setPageOrientation('', true, 0); // The only function to edit the bottom margin of current page to set it.
-				//							$this->_pagefoot($pdf, $object, $outputlangs, 1);
-				//
-				//							$i++;
-				//						}
-				//
-				//						// apply note frame to last page
-				//						$pdf->setPage($pageposafternote);
-				//						if (!empty($this->tplidx)) {
-				//							$pdf->useTemplate($this->tplidx);
-				//						}
-				//						if (!getDolGlobalInt('MAIN_PDF_DONOTREPEAT_HEAD')) {
-				//							$this->_pagehead($pdf, $object, 0, $outputlangs, $outputlangsbis);
-				//						}
-				//						$height_note = $posyafter - $this->tab_top_newpage;
-				//						$pdf->RoundedRect($this->marge_gauche, $this->tab_top_newpage - 1, $tab_width, $height_note + 2, $this->corner_radius, '1234', 'D');
-				//					} else {
-				//						// No pagebreak
-				//						$pdf->commitTransaction();
-				//						$posyafter = $pdf->GetY();
-				//						$height_note = $posyafter - $this->tab_top;
-				//						$pdf->RoundedRect($this->marge_gauche, $this->tab_top - 1, $tab_width, $height_note + 2, $this->corner_radius, '1234', 'D');
-				//
-				//
-				//						if ($posyafter > ($this->page_hauteur - ($this->heightforfooter + $this->heightforfreetext + 20))) {
-				//							// not enough space, need to add page
-				//							$pdf->AddPage('', '', true);
-				//							$pagenb++;
-				//							$pageposafternote++;
-				//							$pdf->setPage($pageposafternote);
-				//							if (!empty($this->tplidx)) {
-				//								$pdf->useTemplate($this->tplidx);
-				//							}
-				//							if (!getDolGlobalInt('MAIN_PDF_DONOTREPEAT_HEAD')) {
-				//								$this->_pagehead($pdf, $object, 0, $outputlangs, $outputlangsbis);
-				//							}
-				//
-				//							$posyafter = $this->tab_top_newpage;
-				//						}
-				//					}
-				//
-				//					$tab_height -= $height_note;
-				//					$this->tab_top = $posyafter + 6;
-				//				} else {
-				//					$height_note = 0;
-				//				}
-				// Use new auto column system
 				$this->prepareArrayColumnField($object, $outputlangs, $hidedetails, $hidedesc, $hideref);
 
 				// Table simulation to know the height of the title line (this set this->tableTitleHeight)
@@ -1184,7 +1040,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 					$pdf->AliasNbPages();  // @phan-suppress-current-line PhanUndeclaredMethod
 				}
 
-				$this->resumeLastPage($pdf, $object, 0, $tab_top, $outputlangs, $outputlangsbis);
+				if (!GETPOSTINT('hidehistofs')) $this->resumeLastPage($pdf, $object, 0, $tab_top, $outputlangs, $outputlangsbis);
 				$bottomlasttab = $this->page_hauteur - $this->heightforinfotot - $this->heightforfreetext - $this->heightforfooter + 1;
 				$this->_pagefoot($pdf, $object, $outputlangs, 1);
 
@@ -2459,7 +2315,11 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 			$title = $outputlangs->transnoentities("InvoiceProForma");
 		}
 		if ($this->situationinvoice) {
-			$title = $outputlangs->transnoentities("PDFInvoiceSituation");
+			if ($object->type == 2) {
+				$title = 'Avoir de situation';
+			} else {
+				$title = $outputlangs->transnoentities("PDFInvoiceSituation");
+			}
 			$subtitle = $outputlangs->transnoentities("PDFSituationTitle", (string) $object->situation_counter);
 		}
 		if (getDolGlobalString('PDF_USE_ALSO_LANGUAGE_CODE') && is_object($outputlangsbis)) {
@@ -3299,10 +3159,13 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 		// ADD TEXT INTO CELL
 		/*		 * ******************** Titles ***************************** */
 		$pdf->SetXY($this->marge_gauche + 2, $tab_top + 8);
-		$pdf->MultiCell(60, 2, $outputlangs->transnoentities("SituationInvoiceMainTask"), '', 'L');
-
-		$pdf->SetXY($this->marge_gauche + 2, $tab_top + 12);
-		$pdf->MultiCell(60, 2, $outputlangs->transnoentities("SituationInvoiceAdditionalTask"), '', 'L');
+		if (getDolGlobalBool('TIMGROUPSITUATIONANDDIRECTINVOICE_HIDETRAVAUXSUP')) {
+			$pdf->MultiCell(60, 2, 'TOTAL HT', '', 'L');
+		} else {
+			$pdf->MultiCell(60, 2, $outputlangs->transnoentities("SituationInvoiceMainTask"), '', 'L');
+			$pdf->SetXY($this->marge_gauche + 2, $tab_top + 12);
+			$pdf->MultiCell(60, 2, $outputlangs->transnoentities("Dont avenants, révisions de prix"), '', 'L');
+		}
 
 		$form->load_cache_vatrates("'" . $object->thirdparty->country_code . "'");
 
@@ -3373,16 +3236,18 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 		// unset($this->TDataSituation['derniere_situation']);
 		// print json_encode($object->lines);exit;
 		// print json_encode($this->TDataSituation);exit;
+		// print_r($TToDisplay); 
+		// print_r($this->TDataSituation); die();
 		foreach ($TToDisplay as $col) {
-
 			// Travaux principaux
 			$pdf->SetXY($x, $tab_top + 8);
 			$pdf->MultiCell(32, 2, price($this->TDataSituation[$col]['HT'], 0, '', 1, -1, 2), '', 'R');
 
-			// Travaux supplémentaires
-			$pdf->SetXY($x, $tab_top + 12);
-			$pdf->MultiCell(32, 2, price($this->TDataSituation[$col]['travaux_sup'], 0, '', 1, -1, 2), '', 'R');
-
+			if (!getDolGlobalBool('TIMGROUPSITUATIONANDDIRECTINVOICE_HIDETRAVAUXSUP')) {
+				// Travaux supplémentaires
+				$pdf->SetXY($x, $tab_top + 12);
+				$pdf->MultiCell(32, 2, price($this->TDataSituation[$col]['travaux_sup'], 0, '', 1, -1, 2), '', 'R');
+			}
 			$i = -8;
 			foreach ($form->cache_vatrates as $TVatInfo) {
 				$tva_tx_formated = sprintf("%01.3f", (float) $TVatInfo['txtva']);
@@ -3562,7 +3427,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 				$TDataSituation['cumul_anterieur']['HT'] += $previousInvoice->total_ht;
 				// $TDataSituation['cumul_anterieur']['TTC'] += $previousInvoice->total_ttc;
 				$TDataSituation['cumul_anterieur']['TVA'] += $previousInvoice->total_tva;
-
+				if (function_exists('rgrpLignesFact'))	rgrpLignesFact($previousInvoice); // !!! ADD VMA LARBRE pour regroupement par missions des factures précédentes !! //
 				//lecture de chaque ligne pour
 				// 1. recalculer le total_ht pour chaque taux de TVA
 				// 2. recalculer la TVA associée à ce montant HT
