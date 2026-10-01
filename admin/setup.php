@@ -57,7 +57,7 @@ if (!$res) {
 
 // Libraries
 require_once DOL_DOCUMENT_ROOT."/core/lib/admin.lib.php";
-require_once '../lib/timgroupsituationanddirectinvoice.lib.php';
+require_once __DIR__.'/../lib/timgroupsituationanddirectinvoice.lib.php';
 //require_once "../class/myclass.class.php";
 
 /**
@@ -112,6 +112,10 @@ if (!$user->admin) {
 
 // Setup conf for a selection of a boolean
 $formSetup->newItem('TIMGROUPSITUATIONANDDIRECTINVOICE_HIDETRAVAUXSUP')->setAsYesNo();
+// Setup conf for a selection of a boolean
+$formSetup->newItem('TIMGROUPSITUATIONANDDIRECTINVOICE_HIDEHISTOFSDEF')->setAsYesNo();
+// Setup conf for a selection of a boolean
+$formSetup->newItem('TIMGROUPSITUATIONANDDIRECTINVOICE_HIDEFIRSTTBLDEF')->setAsYesNo();
 
 // End of definition of parameters
 

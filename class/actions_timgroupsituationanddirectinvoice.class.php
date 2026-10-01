@@ -147,9 +147,11 @@ class ActionsTimgroupsituationanddirectinvoice
 		</script>';
 
 		// rajoute une case à cocher permettant de masquer l'historique lors de la génération des factures de situation
-		$hidehistofs = false;
-        $this->resprints = '<div style="display:inline" id="divhidehistofs">Masquer historique d&ns facture de situation '
-			. '<input type="checkbox" value="1" name="hidehistofs" id="hidehistofs" '.($hidehistofs ? ' checked="checked" ' : '').' />'
+		$hidehistofs = getDolGlobalBool('TIMGROUPSITUATIONANDDIRECTINVOICE_HIDEHISTOFSDEF');
+		$hidefirstpage = getDolGlobalBool('TIMGROUPSITUATIONANDDIRECTINVOICE_HIDEFIRSTTBLDEF');
+        $this->resprints = '<div style="display:inline" id="divhidehistofs">Dans fact. situation : masquer historique '
+			. '<input type="checkbox" value="1" name="hidehistofs" id="hidehistofs" '.($hidehistofs ? ' checked="checked" ' : '').' />&nbsp;-&nbsp;'
+			. 'masquer 1ère page <input type="checkbox" value="1" name="hidefirstpage" id="hidefirstpage" '.($hidefirstpage ? ' checked="checked" ' : '').' />'
 			. '</div>';
 		$this->resprints .= '<script>'
 				. 'function tglaffhidehistofs() {'

@@ -588,27 +588,29 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 
 				$this->tab_top += $extra_under_address_shift;
 				$this->tab_top_newpage += 0;
+				if (!GETPOSTINT('hidefirstpage')) {
+					// Define height of table for lines (for first page)
+					$tab_height = $this->page_hauteur - $this->tab_top - $this->heightforfooter - $this->heightforfreetext - $this->getHeightForQRInvoice(1, $object, $langs);
 
-				// Define height of table for lines (for first page)
-				$tab_height = $this->page_hauteur - $this->tab_top - $this->heightforfooter - $this->heightforfreetext - $this->getHeightForQRInvoice(1, $object, $langs);
+					$nexY = $this->tab_top - 1;
 
-				$nexY = $this->tab_top - 1;
+					// Specific stuff for situations invoices first page
+					$tab_top = 90;
+					$tab_height = 130;
+					$tab_height_newpage = 150;
 
-				// Specific stuff for situations invoices first page
-				$tab_top = 90;
-				$tab_height = 130;
-				$tab_height_newpage = 150;
+					$this->_tableFirstPage($pdf, $tab_top, $this->page_hauteur - 100 - $this->heightforfreetext - $this->heightforfooter, 0, $outputlangs, 0, 0, $object->multicurrency_code);
 
-				$this->_tableFirstPage($pdf, $tab_top, $this->page_hauteur - 100 - $this->heightforfreetext - $this->heightforfooter, 0, $outputlangs, 0, 0, $object->multicurrency_code);
+					$bottomlasttab = $this->page_hauteur - $this->heightforinfotot - $this->heightforfreetext - $this->heightforfooter + 1;
 
-				$bottomlasttab = $this->page_hauteur - $this->heightforinfotot - $this->heightforfreetext - $this->heightforfooter + 1;
+					$this->_pagefoot($pdf, $object, $outputlangs, 1);
 
-				$this->_pagefoot($pdf, $object, $outputlangs, 1);
+					$pdf->AddPage();
+					$pdf->setPage(2);
+					$pagenb++;
+					$this->_pagehead($pdf, $object, 0, $outputlangs, $outputlangsbis);
+				} else $this->tab_top_newpage = 90;
 
-				$pdf->AddPage();
-				$pdf->setPage(2);
-				$pagenb++;
-				$this->_pagehead($pdf, $object, 0, $outputlangs, $outputlangsbis);
 				$pdf->setTopMargin($this->tab_top_newpage);
 
 				// Incoterm
@@ -3465,8 +3467,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 					//le grand total de TVA
 					// $TDataSituation['cumul_anterieur']['TVA'] += $amounttva;
 
-					if (empty($l->fk_prev_id) && !$isFirstSituation) {
-						// TODO: à clarifier, mais pour moi, un facture de situation précédente qui a des progressions à 0% c'est pas logique
+					if (empty($l->fk_prev_id) && !$isFirstSituation && !getDolGlobalBool('TIMGROUPSITUATIONANDDIRECTINVOICE_HIDETRAVAUXSUP')) {
 						$TDataSituation['cumul_anterieur']['travaux_sup'] += $calc_ht;
 					}
 				}
