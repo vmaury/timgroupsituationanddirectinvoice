@@ -116,6 +116,8 @@ $formSetup->newItem('TIMGROUPSITUATIONANDDIRECTINVOICE_HIDETRAVAUXSUP')->setAsYe
 $formSetup->newItem('TIMGROUPSITUATIONANDDIRECTINVOICE_HIDEHISTOFSDEF')->setAsYesNo();
 // Setup conf for a selection of a boolean
 $formSetup->newItem('TIMGROUPSITUATIONANDDIRECTINVOICE_HIDEFIRSTTBLDEF')->setAsYesNo();
+// Setup conf for a selection of a boolean
+$formSetup->newItem('TIMGROUPSITUATIONANDDIRECTINVOICE_DISPTOTSBASDPAGE')->setAsYesNo();
 
 // End of definition of parameters
 

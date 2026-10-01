@@ -9,6 +9,29 @@ class ActionsTimgroupsituationanddirectinvoice
 
 		if (get_class($object) != 'Facture') return 0;
 		/* @var $object Facture */
+		// rajoute des cases à cocher permettant de masquer l'historique, la première page, les totaux en bas de page lors de la génération des factures de situation
+		$hidehistofs = getDolGlobalBool('TIMGROUPSITUATIONANDDIRECTINVOICE_HIDEHISTOFSDEF');
+		$hidefirstpage = getDolGlobalBool('TIMGROUPSITUATIONANDDIRECTINVOICE_HIDEFIRSTTBLDEF');
+		$disptotsbasdpage = getDolGlobalBool('TIMGROUPSITUATIONANDDIRECTINVOICE_DISPTOTSBASDPAGE');
+        $this->resprints = '<div style="display:inline" id="divhidehistofs">Dans fact. situation : masquer historique '
+			. '<input type="checkbox" value="1" name="hidehistofs" id="hidehistofs" '.($hidehistofs ? ' checked="checked" ' : '').' />&nbsp;|&nbsp;'
+			. 'masquer 1ère page <input type="checkbox" value="1" name="hidefirstpage" id="hidefirstpage" '.($hidefirstpage ? ' checked="checked" ' : '').' />&nbsp;|&nbsp;'
+			. 'afficher totaux en bas de la dernière page <input type="checkbox" value="1" name="disptotsbasdpage" id="disptotsbasdpage" '.($disptotsbasdpage ? ' checked="checked" ' : '').' />'
+			. '</div>';
+		$this->resprints .= '<script>'
+				. 'function tglaffhidehistofs() {'
+					. 'if ($("select#model").val() != "facture_timgroup_situation") {'
+						. '$("#divhidehistofs").hide(); '
+					. '} else $("#divhidehistofs").show(); '
+				. '};'
+				. '$(document).ready(function() {'
+					. 'tglaffhidehistofs();'
+					. '$("select#model").on("change", function() {'
+						. 'tglaffhidehistofs();'
+					. '});'
+				. '});'
+				. '</script>';
+		
 		if (empty($object->fk_project)) return 0;
 
 		$langs->load("timgroupsituationanddirectinvoice@timgroupsituationanddirectinvoice");
@@ -145,27 +168,6 @@ class ActionsTimgroupsituationanddirectinvoice
 				}
 			});
 		</script>';
-
-		// rajoute une case à cocher permettant de masquer l'historique lors de la génération des factures de situation
-		$hidehistofs = getDolGlobalBool('TIMGROUPSITUATIONANDDIRECTINVOICE_HIDEHISTOFSDEF');
-		$hidefirstpage = getDolGlobalBool('TIMGROUPSITUATIONANDDIRECTINVOICE_HIDEFIRSTTBLDEF');
-        $this->resprints = '<div style="display:inline" id="divhidehistofs">Dans fact. situation : masquer historique '
-			. '<input type="checkbox" value="1" name="hidehistofs" id="hidehistofs" '.($hidehistofs ? ' checked="checked" ' : '').' />&nbsp;-&nbsp;'
-			. 'masquer 1ère page <input type="checkbox" value="1" name="hidefirstpage" id="hidefirstpage" '.($hidefirstpage ? ' checked="checked" ' : '').' />'
-			. '</div>';
-		$this->resprints .= '<script>'
-				. 'function tglaffhidehistofs() {'
-					. 'if ($("select#model").val() != "facture_timgroup_situation") {'
-						. '$("#divhidehistofs").hide(); '
-					. '} else $("#divhidehistofs").show(); '
-				. '};'
-				. '$(document).ready(function() {'
-					. 'tglaffhidehistofs();'
-					. '$("select#model").on("change", function() {'
-						. 'tglaffhidehistofs();'
-					. '});'
-				. '});'
-				. '</script>';
 		return 0;
 	}
 
@@ -203,6 +205,14 @@ class ActionsTimgroupsituationanddirectinvoice
 			}
 		    header("Location: ".$_SERVER["PHP_SELF"]."?id=".$object->id."#timgroup-directinvoices");
 			exit;
+		}
+		return 0;
+	}
+	
+	function afterPDFCreation($parameters, &$pdfhandler, &$action) {
+		//print_r($parameters); die();
+		if (is_object($parameters['object']) && get_class($parameters['object']) == 'Facture') {
+			header("Location: ".$_SERVER["PHP_SELF"]."?id=".$parameters['object']->id);
 		}
 		return 0;
 	}

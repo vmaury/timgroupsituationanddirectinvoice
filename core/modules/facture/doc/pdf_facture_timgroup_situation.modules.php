@@ -292,6 +292,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 	 */
 	public function write_file($object, $outputlangs, $srctemplatepath = '', $hidedetails = 0, $hidedesc = 0, $hideref = 0) {
 		// phpcs:enable
+		/* @var $object Facture */
 		global $user, $langs, $conf, $mysoc, $db, $hookmanager, $nblines;
 
 		dol_syslog("write_file outputlangs->defaultlang=" . (is_object($outputlangs) ? $outputlangs->defaultlang : 'null'));
@@ -654,13 +655,21 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 				// Loop on each lines
 				$pageposbeforeprintlines = $pdf->getPage();
 				$pagenb = $pageposbeforeprintlines;
+				// add VMA : rajoute ligne pour les totaux
+				if (GETPOSTINT('disptotsbasdpage')) {
+					$object->lines[$nblines] = clone $object->lines[$nblines - 1];
+					$object->lines[$nblines]->desc = 'TOTAUX';
+					$tot_up_excl_tax = $tot_qty = $tot_total_excl_tax = $tot_cpa = $tot_tcpa = $tot_cpa2 = 0;
+					$nblines++;
+				}
 				for ($i = 0; $i < $nblines; $i++) {
+					$islinetot = GETPOSTINT('disptotsbasdpage') && ($i == $nblines - 1);
 					$posy = $nexY;
 					$minY = $table_top_for_lines;
 					if ($pdf->getPage() > 1 && $posy < $minY) {
 						$posy = $minY;
 					}
-					$pdf->SetFont('', '', $default_font_size - 1); // Into loop to work with multipage
+					$pdf->SetFont('', $islinetot ? 'B' : '', $default_font_size - 1); // Into loop to work with multipage
 					$pdf->SetTextColor(0, 0, 0);
 
 					// Define size of image if we need it
@@ -756,10 +765,10 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 						$posy = $this->tab_top_newpage + $this->tabTitleHeight + $extra_header_shift;
 					}
 
-					$pdf->SetFont('', '', $default_font_size - 1); // We reposition the default font
+					$pdf->SetFont('', $islinetot ? 'B' : '', $default_font_size - 1); // We reposition the default font
 					// VAT Rate
 					if ($this->getColumnStatus('vat')) {
-						$vat_rate = pdf_getlinevatrate($object, $i, $outputlangs, $hidedetails);
+						$vat_rate = $islinetot ? '' : pdf_getlinevatrate($object, $i, $outputlangs, $hidedetails);
 						$this->printStdColumnContent($pdf, $posy, 'vat', $vat_rate);
 						$nexY = max($pdf->GetY(), $nexY);
 					}
@@ -767,6 +776,11 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 					// Unit price before discount
 					if ($this->getColumnStatus('subprice')) {
 						$up_excl_tax = pdf_getlineupexcltax($object, $i, $outputlangs, $hidedetails);
+						if ($islinetot) {
+							$up_excl_tax = price($tot_up_excl_tax);
+						} else {
+							$tot_up_excl_tax += price2num($up_excl_tax);
+						}
 						$this->printStdColumnContent($pdf, $posy, 'subprice', $up_excl_tax);
 						$nexY = max($pdf->GetY(), $nexY);
 					}
@@ -774,35 +788,58 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 					// Quantity
 					// Enough for 6 chars
 					if ($this->getColumnStatus('qty')) {
-						$qty = pdf_getlineqty($object, $i, $outputlangs, $hidedetails);
+						if ($islinetot) {
+							$qty = $tot_qty;
+						} else {
+							$qty = pdf_getlineqty($object, $i, $outputlangs, $hidedetails);
+							$tot_qty += $object->lines[$i]->qty;
+						}
 						$this->printStdColumnContent($pdf, $posy, 'qty', $qty);
 						$nexY = max($pdf->GetY(), $nexY);
 					}
 
 					// Situation progress
 					if ($this->getColumnStatus('progress')) {
-						$progress = pdf_getlineprogress($object, $i, $outputlangs, $hidedetails);
+						if ($islinetot) {
+							$progress = '';
+						} else {
+							$progress = pdf_getlineprogress($object, $i, $outputlangs, $hidedetails);
+						}
+						
 						$this->printStdColumnContent($pdf, $posy, 'progress', $progress);
 						$nexY = max($pdf->GetY(), $nexY);
 					}
 
 					// Unit
 					if ($this->getColumnStatus('unit')) {
-						$unit = pdf_getlineunit($object, $i, $outputlangs, $hidedetails);
+						if ($islinetot) {
+							$unit = '';
+						} else {
+							$unit = pdf_getlineunit($object, $i, $outputlangs, $hidedetails);
+						}
 						$this->printStdColumnContent($pdf, $posy, 'unit', $unit);
 						$nexY = max($pdf->GetY(), $nexY);
 					}
 
 					// Discount on line
 					if ($this->getColumnStatus('discount') && $object->lines[$i]->remise_percent) {
-						$remise_percent = pdf_getlineremisepercent($object, $i, $outputlangs, $hidedetails);
+						if ($islinetot) {
+							$remise_percent = '';
+						} else {
+							$remise_percent = pdf_getlineremisepercent($object, $i, $outputlangs, $hidedetails);
+						}
 						$this->printStdColumnContent($pdf, $posy, 'discount', $remise_percent);
 						$nexY = max($pdf->GetY(), $nexY);
 					}
 
 					// Total excl tax line (HT)
 					if ($this->getColumnStatus('totalexcltax')) {
-						$total_excl_tax = pdf_getlinetotalexcltax($object, $i, $outputlangs, $hidedetails);
+						if ($islinetot) {
+							$total_excl_tax = $tot_total_excl_tax;
+						} else {
+							$total_excl_tax = pdf_getlinetotalexcltax($object, $i, $outputlangs, $hidedetails);
+							$tot_total_excl_tax += price2num($total_excl_tax);
+						}
 						$this->printStdColumnContent($pdf, $posy, 'totalexcltax', $total_excl_tax);
 						$nexY = max($pdf->GetY(), $nexY);
 					}
@@ -813,7 +850,13 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 					$columkey = 'btpsomme';
 					$total_ht_without_progress = $TInfosLigneSituationPrecedente['total_ht_without_progress'];
 					if ($this->getColumnStatus($columkey)) {
-						$printval = price($total_ht_without_progress, 0, '', 1, -1, 2);
+						if ($islinetot) {
+							$htwp = $tot_htwp;
+						} else {
+							$htwp = $total_ht_without_progress;
+							$tot_htwp += $total_ht_without_progress;
+						}
+						$printval = price($htwp, 0, '', 1, -1, 2);
 						$this->printStdColumnContent($pdf, $posy, $columkey, $printval);
 						$nexY = max($pdf->GetY(), $nexY);
 					}
@@ -827,14 +870,24 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 					// Previous cumulated progress line
 					$columkey = 'previous_cumulated_progress';
 					if ($this->getColumnStatus($columkey)) {
-						$printval = $previous_cumulated_progress . '%';
+						if ($islinetot) {
+							$printval = '';
+						} else {
+							$printval = $previous_cumulated_progress . '%';
+						}
 						$this->printStdColumnContent($pdf, $posy, $columkey, $printval);
 						$nexY = max($pdf->GetY(), $nexY);
 					}
 					// Previous cumulated progress amount
 					$columkey = 'previous_cumulated_progress_amount';
 					if ($this->getColumnStatus($columkey)) {
-						$printval = price($previous_cumulated_progress_amount, 0, '', 1, -1, 2);
+						if ($islinetot) {
+							$cpa = $tot_cpa;
+						} else {
+							$cpa = $previous_cumulated_progress_amount;
+							$tot_cpa += $cpa;
+						}
+						$printval = price($cpa, 0, '', 1, -1, 2);
 						$this->printStdColumnContent($pdf, $posy, $columkey, $printval);
 						$nexY = max($pdf->GetY(), $nexY);
 					}
@@ -842,14 +895,24 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 					// Total cumulated progress line
 					$columkey = 'total_cumulated_progress';
 					if ($this->getColumnStatus($columkey)) {
-						$printval = $total_cumulated_progress . '%';
+						if ($islinetot) {
+							$printval = '';
+						} else {
+							$printval = $total_cumulated_progress . '%';
+						}
 						$this->printStdColumnContent($pdf, $posy, $columkey, $printval);
 						$nexY = max($pdf->GetY(), $nexY);
 					}
 					//Total cumulated progress amount
 					$columkey = 'total_cumulated_progress_amount';
 					if ($this->getColumnStatus($columkey)) {
-						$printval = price($total_cumulated_progress_amount, 0, '', 1, -1, 2);
+						if ($islinetot) {
+							$tcpa = $tot_tcpa;
+						} else {
+							$tcpa = $total_cumulated_progress_amount;
+							$tot_tcpa += $tcpa;
+						}
+						$printval = price($tcpa, 0, '', 1, -1, 2);
 						$this->printStdColumnContent($pdf, $posy, $columkey, $printval);
 						$nexY = max($pdf->GetY(), $nexY);
 					}
@@ -857,7 +920,13 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 					// Current progress
 					$columkey = 'progress_amount';
 					if ($this->getColumnStatus($columkey)) {
-						$printval = price($current_progress_amount, 0, '', 1, -1, 2);
+						if ($islinetot) {
+							$tcpa2 = $tot_tcpa2;
+						} else {
+							$tcpa2 = $current_progress_amount;
+							$tot_tcpa2 += $tcpa2;
+						}
+						$printval = price($tcpa2, 0, '', 1, -1, 2);
 						$this->printStdColumnContent($pdf, $posy, $columkey, $printval);
 						$nexY = max($pdf->GetY(), $nexY);
 					}
@@ -876,98 +945,107 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 					// 	$this->printStdColumnContent($pdf, $posy, $columkey, $printval);
 					// 	$nexY = max($pdf->GetY(), $nexY);
 					// }
+					if (!$islinetot) {
+						$parameters = array(
+							'object' => $object,
+							'i' => $i,
+							'pdf' => & $pdf,
+							'curY' => & $posy,
+							'nexY' => & $nexY,
+							'outputlangs' => $outputlangs,
+							'hidedetails' => $hidedetails
+						);
+						$reshook = $hookmanager->executeHooks('printPDFline', $parameters, $this); // Note that $object may have been modified by hook
 
-					$parameters = array(
-						'object' => $object,
-						'i' => $i,
-						'pdf' => & $pdf,
-						'curY' => & $posy,
-						'nexY' => & $nexY,
-						'outputlangs' => $outputlangs,
-						'hidedetails' => $hidedetails
-					);
-					$reshook = $hookmanager->executeHooks('printPDFline', $parameters, $this); // Note that $object may have been modified by hook
 
-
-					$sign = 1;
-					if (isset($object->type) && $object->type == 2 && getDolGlobalString('INVOICE_POSITIVE_CREDIT_NOTE')) {
-						$sign = -1;
-					}
-					// Collecte des totaux par valeur de tva dans $this->tva["taux"]=total_tva
-					// avec le INVOICE_USE_SITUATION = 2, le total_tva est ok en base, pas besoin de récupérer les situations précédentes
-					if (isModEnabled("multicurrency") && $object->multicurrency_tx != 1) {
-						$tvaligne = $sign * $object->lines[$i]->multicurrency_total_tva;
-					} else {
-						$tvaligne = $sign * $object->lines[$i]->total_tva;
-					}
-
-					$localtax1ligne = $object->lines[$i]->total_localtax1;
-					$localtax2ligne = $object->lines[$i]->total_localtax2;
-					$localtax1_rate = $object->lines[$i]->localtax1_tx;
-					$localtax2_rate = $object->lines[$i]->localtax2_tx;
-					$localtax1_type = $object->lines[$i]->localtax1_type;
-					$localtax2_type = $object->lines[$i]->localtax2_type;
-
-					$vatrate = (string) $object->lines[$i]->tva_tx;
-
-					// Retrieve type from database for backward compatibility with old records
-					if ((!isset($localtax1_type) || $localtax1_type == '' || !isset($localtax2_type) || $localtax2_type == '') // if tax type not defined
-							&& (!empty($localtax1_rate) || !empty($localtax2_rate))) { // and there is local tax
-						$localtaxtmp_array = getLocalTaxesFromRate($vatrate, 0, $object->thirdparty, $mysoc);
-						$localtax1_type = isset($localtaxtmp_array[0]) ? $localtaxtmp_array[0] : '';
-						$localtax2_type = isset($localtaxtmp_array[2]) ? $localtaxtmp_array[2] : '';
-					}
-
-					// retrieve global local tax
-					if ($localtax1_type && $localtax1ligne != 0) {
-						if (empty($this->localtax1[$localtax1_type][$localtax1_rate])) {
-							$this->localtax1[$localtax1_type][$localtax1_rate] = $localtax1ligne;
+						$sign = 1;
+						if (isset($object->type) && $object->type == 2 && getDolGlobalString('INVOICE_POSITIVE_CREDIT_NOTE')) {
+							$sign = -1;
+						}
+						// Collecte des totaux par valeur de tva dans $this->tva["taux"]=total_tva
+						// avec le INVOICE_USE_SITUATION = 2, le total_tva est ok en base, pas besoin de récupérer les situations précédentes
+						if (isModEnabled("multicurrency") && $object->multicurrency_tx != 1) {
+							$tvaligne = $sign * $object->lines[$i]->multicurrency_total_tva;
 						} else {
-							$this->localtax1[$localtax1_type][$localtax1_rate] += $localtax1ligne;
+							$tvaligne = $sign * $object->lines[$i]->total_tva;
 						}
-					}
-					if ($localtax2_type && $localtax2ligne != 0) {
-						if (empty($this->localtax2[$localtax2_type][$localtax2_rate])) {
-							$this->localtax2[$localtax2_type][$localtax2_rate] = $localtax2ligne;
+
+						$localtax1ligne = $object->lines[$i]->total_localtax1;
+						$localtax2ligne = $object->lines[$i]->total_localtax2;
+						$localtax1_rate = $object->lines[$i]->localtax1_tx;
+						$localtax2_rate = $object->lines[$i]->localtax2_tx;
+						$localtax1_type = $object->lines[$i]->localtax1_type;
+						$localtax2_type = $object->lines[$i]->localtax2_type;
+
+						$vatrate = (string) $object->lines[$i]->tva_tx;
+
+						// Retrieve type from database for backward compatibility with old records
+						if ((!isset($localtax1_type) || $localtax1_type == '' || !isset($localtax2_type) || $localtax2_type == '') // if tax type not defined
+								&& (!empty($localtax1_rate) || !empty($localtax2_rate))) { // and there is local tax
+							$localtaxtmp_array = getLocalTaxesFromRate($vatrate, 0, $object->thirdparty, $mysoc);
+							$localtax1_type = isset($localtaxtmp_array[0]) ? $localtaxtmp_array[0] : '';
+							$localtax2_type = isset($localtaxtmp_array[2]) ? $localtaxtmp_array[2] : '';
+						}
+
+						// retrieve global local tax
+						if ($localtax1_type && $localtax1ligne != 0) {
+							if (empty($this->localtax1[$localtax1_type][$localtax1_rate])) {
+								$this->localtax1[$localtax1_type][$localtax1_rate] = $localtax1ligne;
+							} else {
+								$this->localtax1[$localtax1_type][$localtax1_rate] += $localtax1ligne;
+							}
+						}
+						if ($localtax2_type && $localtax2ligne != 0) {
+							if (empty($this->localtax2[$localtax2_type][$localtax2_rate])) {
+								$this->localtax2[$localtax2_type][$localtax2_rate] = $localtax2ligne;
+							} else {
+								$this->localtax2[$localtax2_type][$localtax2_rate] += $localtax2ligne;
+							}
+						}
+
+						if (($object->lines[$i]->info_bits & 0x01) == 0x01) {
+							$vatrate .= '*';
+						}
+
+						// Fill $this->tva and $this->tva_array
+						if (!isset($this->tva[$vatrate])) {
+							$this->tva[$vatrate] = 0;
+						}
+						$this->tva[$vatrate] += $tvaligne; // ->tva is abandoned, we use now ->tva_array that is more complete
+						$vatcode = $object->lines[$i]->vat_src_code;
+
+						if (getDolGlobalInt('PDF_INVOICE_SHOW_VAT_ANALYSIS')) {
+							if (empty($this->tva_array[$vatrate . ($vatcode ? ' (' . $vatcode . ')' : '')]['tot_ht'])) {
+								$this->tva_array[$vatrate . ($vatcode ? ' (' . $vatcode . ')' : '')]['tot_ht'] = 0;
+							}
+							$this->tva_array[$vatrate . ($vatcode ? ' (' . $vatcode . ')' : '')] = array('vatrate' => $vatrate, 'vatcode' => $vatcode, 'amount' => $this->tva_array[$vatrate . ($vatcode ? ' (' . $vatcode . ')' : '')]['amount'] + $tvaligne, 'tot_ht' => $this->tva_array[$vatrate . ($vatcode ? ' (' . $vatcode . ')' : '')]['tot_ht'] + $object->lines[$i]->total_ht);
 						} else {
-							$this->localtax2[$localtax2_type][$localtax2_rate] += $localtax2ligne;
+							if (empty($this->tva_array[$vatrate . ($vatcode ? ' (' . $vatcode . ')' : '')]['amount'])) {
+								$this->tva_array[$vatrate . ($vatcode ? ' (' . $vatcode . ')' : '')]['amount'] = 0;
+							}
+							$this->tva_array[$vatrate . ($vatcode ? ' (' . $vatcode . ')' : '')] = array('vatrate' => $vatrate, 'vatcode' => $vatcode, 'amount' => $this->tva_array[$vatrate . ($vatcode ? ' (' . $vatcode . ')' : '')]['amount'] + $tvaligne);
+						}
+
+						$nexY = max($nexY, $posYAfterImage);
+						
+						$offsetnl = GETPOSTINT('disptotsbasdpage') ? 2 : 1;
+						// Add line
+						if (getDolGlobalString('MAIN_PDF_DASH_BETWEEN_LINES') && $i < ($nblines - $offsetnl)) {
+							$pdf->setPage($pageposafter);
+							$pdf->SetLineStyle(array('dash' => '1,1', 'color' => array(80, 80, 80)));
+							//$pdf->SetDrawColor(190,190,200);
+							$pdf->line($this->marge_gauche, $nexY, $this->page_largeur - $this->marge_droite, $nexY);
+							$pdf->SetLineStyle(array('dash' => 0));
+						}
+						if (GETPOSTINT('disptotsbasdpage') && $i == ($nblines - $offsetnl)) {
+							$nexY += 5;
+							$pdf->setPage($pageposafter);
+							//$pdf->SetLineStyle(array('width' => '', 'color' => array(80, 80, 80)));
+							//$pdf->SetDrawColor(190,190,200);
+							$pdf->line($this->marge_gauche, $nexY, $this->page_largeur - $this->marge_droite, $nexY);
+							//$pdf->SetLineStyle(array('dash' => 0));
 						}
 					}
-
-					if (($object->lines[$i]->info_bits & 0x01) == 0x01) {
-						$vatrate .= '*';
-					}
-
-					// Fill $this->tva and $this->tva_array
-					if (!isset($this->tva[$vatrate])) {
-						$this->tva[$vatrate] = 0;
-					}
-					$this->tva[$vatrate] += $tvaligne; // ->tva is abandoned, we use now ->tva_array that is more complete
-					$vatcode = $object->lines[$i]->vat_src_code;
-
-					if (getDolGlobalInt('PDF_INVOICE_SHOW_VAT_ANALYSIS')) {
-						if (empty($this->tva_array[$vatrate . ($vatcode ? ' (' . $vatcode . ')' : '')]['tot_ht'])) {
-							$this->tva_array[$vatrate . ($vatcode ? ' (' . $vatcode . ')' : '')]['tot_ht'] = 0;
-						}
-						$this->tva_array[$vatrate . ($vatcode ? ' (' . $vatcode . ')' : '')] = array('vatrate' => $vatrate, 'vatcode' => $vatcode, 'amount' => $this->tva_array[$vatrate . ($vatcode ? ' (' . $vatcode . ')' : '')]['amount'] + $tvaligne, 'tot_ht' => $this->tva_array[$vatrate . ($vatcode ? ' (' . $vatcode . ')' : '')]['tot_ht'] + $object->lines[$i]->total_ht);
-					} else {
-						if (empty($this->tva_array[$vatrate . ($vatcode ? ' (' . $vatcode . ')' : '')]['amount'])) {
-							$this->tva_array[$vatrate . ($vatcode ? ' (' . $vatcode . ')' : '')]['amount'] = 0;
-						}
-						$this->tva_array[$vatrate . ($vatcode ? ' (' . $vatcode . ')' : '')] = array('vatrate' => $vatrate, 'vatcode' => $vatcode, 'amount' => $this->tva_array[$vatrate . ($vatcode ? ' (' . $vatcode . ')' : '')]['amount'] + $tvaligne);
-					}
-
-					$nexY = max($nexY, $posYAfterImage);
-
-					// Add line
-					if (getDolGlobalString('MAIN_PDF_DASH_BETWEEN_LINES') && $i < ($nblines - 1)) {
-						$pdf->setPage($pageposafter);
-						$pdf->SetLineStyle(array('dash' => '1,1', 'color' => array(80, 80, 80)));
-						//$pdf->SetDrawColor(190,190,200);
-						$pdf->line($this->marge_gauche, $nexY, $this->page_largeur - $this->marge_droite, $nexY);
-						$pdf->SetLineStyle(array('dash' => 0));
-					}
-
 					// Detect if some page were added automatically and output _tableau for past pages
 					while ($pagenb < $pageposafter) {
 						$pdf->setPage($pagenb);
@@ -2322,7 +2400,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 			} else {
 				$title = $outputlangs->transnoentities("PDFInvoiceSituation");
 			}
-			$subtitle = $outputlangs->transnoentities("PDFSituationTitle", (string) $object->situation_counter);
+			if (!GETPOSTINT('hidehistofs')) $subtitle = $outputlangs->transnoentities("PDFSituationTitle", (string) $object->situation_counter);
 		}
 		if (getDolGlobalString('PDF_USE_ALSO_LANGUAGE_CODE') && is_object($outputlangsbis)) {
 			$title .= ' - ';

@@ -11,6 +11,8 @@ ModuleTimgroupsituationanddirectinvoiceDesc = Facture de situation et paiements 
 TIMGROUPSITUATIONANDDIRECTINVOICE_HIDETRAVAUXSUP = Masquer la ligne "travaux supplémentaires" dans le pdf
 TIMGROUPSITUATIONANDDIRECTINVOICE_HIDEHISTOFSDEF = Masquer l'historique par défaut
 TIMGROUPSITUATIONANDDIRECTINVOICE_HIDEFIRSTTBLDEF = Masquer la première page de récap par défaut
+TIMGROUPSITUATIONANDDIRECTINVOICE_DISPTOTSBASDPAGE = Afficher les totaux en bas de la première page par défaut
+
 #
 # Situation
 #
