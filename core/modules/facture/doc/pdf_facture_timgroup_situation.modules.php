@@ -261,6 +261,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 		if (!empty($object)) {
 			'@phan-var-force Facture $object'; // Supposing $object is Facture;
 			$this->TDataSituation = $this->getDataSituation($object);
+			// echo '<pre>';unset($this->TDataSituation['derniere_situation']);print_r($this->TDataSituation); die();
 		} else {
 			dol_syslog("object is empty, do not call getDataSituation...");
 		}
@@ -588,32 +589,28 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 				}
 
 				$this->tab_top += $extra_under_address_shift;
-				$this->tab_top_newpage += 0;
-				if (!GETPOSTINT('hidefirstpage')) {
-					// Define height of table for lines (for first page)
-					$tab_height = $this->page_hauteur - $this->tab_top - $this->heightforfooter - $this->heightforfreetext - $this->getHeightForQRInvoice(1, $object, $langs);
+				// Define height of table for lines (for first page)
+				$tab_height = $this->page_hauteur - $this->tab_top - $this->heightforfooter - $this->heightforfreetext - $this->getHeightForQRInvoice(1, $object, $langs);
 
-					$nexY = $this->tab_top - 1;
+				$nexY = $this->tab_top - 1;
 
-					// Specific stuff for situations invoices first page
-					$tab_top = 90;
-					$tab_height = 130;
-					$tab_height_newpage = 150;
+				// Specific stuff for situations invoices first page
+				$tab_top = 90;
+				$tab_height = 130;
 
-					$this->_tableFirstPage($pdf, $tab_top, $this->page_hauteur - 100 - $this->heightforfreetext - $this->heightforfooter, 0, $outputlangs, 0, 0, $object->multicurrency_code);
+				$this->_tableFirstPage($pdf, $tab_top, $this->page_hauteur - 100 - $this->heightforfreetext - $this->heightforfooter, 0, $outputlangs, 0, 0, $object->multicurrency_code);
 
-					$bottomlasttab = $this->page_hauteur - $this->heightforinfotot - $this->heightforfreetext - $this->heightforfooter + 1;
+				$bottomlasttab = $this->page_hauteur - $this->heightforinfotot - $this->heightforfreetext - $this->heightforfooter + 1;
 
-					$this->_pagefoot($pdf, $object, $outputlangs, 1);
+				$this->_pagefoot($pdf, $object, $outputlangs, 1);
 
-					$pdf->AddPage();
-					$pdf->setPage(2);
-					$pagenb++;
-					$this->_pagehead($pdf, $object, 0, $outputlangs, $outputlangsbis);
-				} else $this->tab_top_newpage = 90;
-
+				$pdf->AddPage();
+				$pdf->setPage(2);
+				$pagenb++;
+				$this->_pagehead($pdf, $object, 0, $outputlangs, $outputlangsbis);
 				$pdf->setTopMargin($this->tab_top_newpage);
 
+				
 				// Incoterm
 				$height_incoterms = 0;
 				if (isModEnabled('incoterm')) {
@@ -655,10 +652,11 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 				// Loop on each lines
 				$pageposbeforeprintlines = $pdf->getPage();
 				$pagenb = $pageposbeforeprintlines;
-				// add VMA : rajoute ligne pour les totaux
+				// Option rajout ligne pour les totaux
 				if (GETPOSTINT('disptotsbasdpage')) {
 					$object->lines[$nblines] = clone $object->lines[$nblines - 1];
 					$object->lines[$nblines]->desc = 'TOTAUX';
+					$object->lines[$nblines]->fk_product = null;
 					$tot_up_excl_tax = $tot_qty = $tot_total_excl_tax = $tot_cpa = $tot_tcpa = $tot_cpa2 = 0;
 					$nblines++;
 				}
@@ -864,7 +862,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 					$current_progress_amount = $object->lines[$i]->total_ht;
 					$previous_cumulated_progress = $object->lines[$i]->getAllPrevProgress($object->id);
 					$previous_cumulated_progress_amount = $total_ht_without_progress * $previous_cumulated_progress / 100;
-					$total_cumulated_progress = $previous_cumulated_progress + $progress;
+					$total_cumulated_progress = $previous_cumulated_progress + (float) $progress;
 					$total_cumulated_progress_amount = $previous_cumulated_progress_amount + $current_progress_amount;
 
 					// Previous cumulated progress line
@@ -873,7 +871,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 						if ($islinetot) {
 							$printval = '';
 						} else {
-							$printval = $previous_cumulated_progress . '%';
+							$printval = round($previous_cumulated_progress, getDolGlobalInt('INVOICE_SITUATION_PROGRESS_DECIMALS', 2)) . '%';
 						}
 						$this->printStdColumnContent($pdf, $posy, $columkey, $printval);
 						$nexY = max($pdf->GetY(), $nexY);
@@ -898,7 +896,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 						if ($islinetot) {
 							$printval = '';
 						} else {
-							$printval = $total_cumulated_progress . '%';
+							$printval = round($total_cumulated_progress, getDolGlobalInt('INVOICE_SITUATION_PROGRESS_DECIMALS', 2)) . '%';
 						}
 						$this->printStdColumnContent($pdf, $posy, $columkey, $printval);
 						$nexY = max($pdf->GetY(), $nexY);
@@ -917,7 +915,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 						$nexY = max($pdf->GetY(), $nexY);
 					}
 
-					// Current progress
+					// Current progress amount
 					$columkey = 'progress_amount';
 					if ($this->getColumnStatus($columkey)) {
 						if ($islinetot) {
@@ -3179,214 +3177,226 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 			complete_substitutions_array($substitutionarray, $outputlangs, $object);
 			$notetoshow = make_substitutions($notetoshow, $substitutionarray, $outputlangs);
 			$notetoshow = convertBackOfficeMediasLinksToPublicLinks($notetoshow);
-
+			if (GETPOSTINT('hidefirstpage')) {
+				$tab_top += 4;
+				$pdf->SetFont('', 'B', $default_font_size + 1);
+				$pdf->writeHTMLCell(190, 3, $this->posxdesc - 1, $tab_top, 'NOTES', 0, 1);
+				$posyafter = $pdf->GetY();
+				$tab_top += $posyafter - $posybefore + 2;
+			}
 			$pdf->SetFont('', '', $default_font_size - 1);
 			$pdf->writeHTMLCell(190, 3, $this->posxdesc - 1, $tab_top, dol_htmlentitiesbr($notetoshow), 0, 1);
 			// Description
 			$posyafter = $pdf->GetY();
 			$tab_top += $posyafter - $posybefore + 2;
-		}
-		
-		// affichage du montant du marché total
-		$this->getPropalsAndOrders($object);
-		
-		
-		$tab_top -= 2;
-		$posybefore = $pdf->GetY();
-		$pdf->SetFont('', '', $default_font_size);
-		$pdf->writeHTMLCell(190, 3, $this->posxdesc - 1, $tab_top, $outputlangs->transnoentities("SituationInvoiceMontantMarche", price($this->total_marche_ht), price($this->total_marche_ttc)), 0, 1);
-		$posyafter = $pdf->GetY();
-		$tab_top += $posyafter - $posybefore + 2;
-
-		// Output Rect
-		// KEEPTHIS => Affiche les bords extérieurs
-		$pdf->SetFont('', '', $default_font_size - 1);
-		$this->printRoundedRectBtp($pdf, $this->marge_gauche, $tab_top, $this->page_largeur - $this->marge_gauche - $this->marge_droite, $tab_height, $this->corner_radius, $hidetop, $hidebottom, 'D'); // Rect prend une longueur en 3eme param et 4eme param
-
-		$pdf->line($this->posx_cumul_anterieur - 1, $tab_top, $this->posx_cumul_anterieur - 1, $tab_top + $tab_height);
-		if (empty($hidetop)) {
-			$pdf->SetXY($this->posx_cumul_anterieur - 1, $tab_top + 0.5);
-			$pdf->MultiCell(35, 2, $outputlangs->transnoentities("SituationInvoiceOldCumulation"), '', 'C');
-		}
-
-		// PRINT COLUMNS TITLES
-		$pdf->line($this->posx_new_cumul - 1, $tab_top, $this->posx_new_cumul - 1, $tab_top + $tab_height);
-		if (empty($hidetop)) {
-			$pdf->SetXY($this->posx_new_cumul - 1, $tab_top + 0.5);
-			$pdf->MultiCell(35, 2, $outputlangs->transnoentities("SituationInvoiceNewCumulation"), '', 'C');
-		}
-
-		$pdf->line($this->posx_current - 1, $tab_top, $this->posx_current - 1, $tab_top + $tab_height);
-		if (empty($hidetop)) {
-			$pdf->SetXY($this->posx_current - 1, $tab_top + 0.5);
-			$pdf->MultiCell(36, 2, $outputlangs->transnoentities("CurrentSituationTotal", (string) $object->situation_counter), '', 'C');
-		}
-
-		// ADD HORIZONTAL LINES
-		$pdf->line($this->posx_cumul_anterieur - 1, $tab_top + 5, $this->page_largeur - $this->marge_droite, $tab_top + 5);
-
-		$pdf->line($this->posx_cumul_anterieur - 1, $tab_top + 24, $this->page_largeur - $this->marge_droite, $tab_top + 24);
-
-		$pdf->line($this->marge_gauche, $tab_top + 55, $this->page_largeur - $this->marge_droite, $tab_top + 55);
-
-		$pdf->line($this->marge_gauche, $tab_top + 65, $this->page_largeur - $this->marge_droite, $tab_top + 65);
-
-		if ($displayWarranty || $fournInvoices["nouveau_cumul"] != 0) {
-			$pdf->line($this->marge_gauche, $tab_top + 85, $this->page_largeur - $this->marge_droite, $tab_top + 85);
-		}
-
-
-		// ADD TEXT INTO CELL
-		/*		 * ******************** Titles ***************************** */
-		$pdf->SetXY($this->marge_gauche + 2, $tab_top + 8);
-		if (getDolGlobalBool('TIMGROUPSITUATIONANDDIRECTINVOICE_HIDETRAVAUXSUP')) {
-			$pdf->MultiCell(60, 2, 'TOTAL HT', '', 'L');
+		} 
+		if (GETPOSTINT('hidefirstpage')) {
+			$tab_top += 5;
+			$pdf->SetFont('', '', $default_font_size + 1);			
+			$pdf->writeHTMLCell(190, 3, $this->posxdesc - 1, $tab_top, 'Veuillez trouver ci-après le détail de votre facture', 0, 1);
+			$posyafter = $pdf->GetY();
+			$tab_top += $posyafter - $posybefore + 2;
 		} else {
-			$pdf->MultiCell(60, 2, $outputlangs->transnoentities("SituationInvoiceMainTask"), '', 'L');
-			$pdf->SetXY($this->marge_gauche + 2, $tab_top + 12);
-			$pdf->MultiCell(60, 2, $outputlangs->transnoentities("Dont avenants, révisions de prix"), '', 'L');
-		}
+			// affichage du montant du marché total
+			$this->getPropalsAndOrders($object);
 
-		$form->load_cache_vatrates("'" . $object->thirdparty->country_code . "'");
+			$tab_top -= 2;
+			$posybefore = $pdf->GetY();
+			$pdf->SetFont('', '', $default_font_size);
+			$pdf->writeHTMLCell(190, 3, $this->posxdesc - 1, $tab_top, $outputlangs->transnoentities("SituationInvoiceMontantMarche", price($this->total_marche_ht), price($this->total_marche_ttc)), 0, 1);
+			$posyafter = $pdf->GetY();
+			$tab_top += $posyafter - $posybefore + 2;
 
-		$i = -8;
-		foreach ($form->cache_vatrates as $TVatInfo) {
-			$tva_tx_formated = sprintf("%01.3f", (float) $TVatInfo['txtva']);
-			// print "<p>Un taux de tva ... $tva_tx_formated :: " . json_encode($this->TDataSituation['current'][$tva_tx_formated]) . "</p>";
-			if (empty($this->TDataSituation['current'][$tva_tx_formated])) {
-				continue;
+			// Output Rect
+			// KEEPTHIS => Affiche les bords extérieurs
+			$pdf->SetFont('', '', $default_font_size - 1);
+			$this->printRoundedRectBtp($pdf, $this->marge_gauche, $tab_top, $this->page_largeur - $this->marge_gauche - $this->marge_droite, $tab_height, $this->corner_radius, $hidetop, $hidebottom, 'D'); // Rect prend une longueur en 3eme param et 4eme param
+
+			$pdf->line($this->posx_cumul_anterieur - 1, $tab_top, $this->posx_cumul_anterieur - 1, $tab_top + $tab_height);
+			if (empty($hidetop)) {
+				$pdf->SetXY($this->posx_cumul_anterieur - 1, $tab_top + 0.5);
+				$pdf->MultiCell(35, 2, $outputlangs->transnoentities("SituationInvoiceOldCumulation"), '', 'C');
 			}
-			$i += 8;
 
-			$pdf->SetXY($this->marge_gauche + 10, $tab_top + 24 + $i);
-			$pdf->MultiCell(80, 2, $outputlangs->transnoentities("TotalHT") . ' ' . $TVatInfo['label'], '', 'L');
+			// PRINT COLUMNS TITLES
+			$pdf->line($this->posx_new_cumul - 1, $tab_top, $this->posx_new_cumul - 1, $tab_top + $tab_height);
+			if (empty($hidetop)) {
+				$pdf->SetXY($this->posx_new_cumul - 1, $tab_top + 0.5);
+				$pdf->MultiCell(35, 2, $outputlangs->transnoentities("SituationInvoiceNewCumulation"), '', 'C');
+			}
 
-			if (!empty($this->TDataSituation['current'][$tva_tx_formated]['TVA'])) {
-				$pdf->SetXY($this->marge_gauche + 10, $tab_top + 28 + $i);
-				$pdf->MultiCell(80, 2, $outputlangs->transnoentities("VAT") . ' ' . $TVatInfo['label'], '', 'L');
+			$pdf->line($this->posx_current - 1, $tab_top, $this->posx_current - 1, $tab_top + $tab_height);
+			if (empty($hidetop)) {
+				$pdf->SetXY($this->posx_current - 1, $tab_top + 0.5);
+				$pdf->MultiCell(36, 2, $outputlangs->transnoentities("CurrentSituationTotal", (string) $object->situation_counter), '', 'C');
+			}
+
+			// ADD HORIZONTAL LINES
+			$pdf->line($this->posx_cumul_anterieur - 1, $tab_top + 5, $this->page_largeur - $this->marge_droite, $tab_top + 5);
+
+			$pdf->line($this->posx_cumul_anterieur - 1, $tab_top + 24, $this->page_largeur - $this->marge_droite, $tab_top + 24);
+
+			$pdf->line($this->marge_gauche, $tab_top + 55, $this->page_largeur - $this->marge_droite, $tab_top + 55);
+
+			$pdf->line($this->marge_gauche, $tab_top + 65, $this->page_largeur - $this->marge_droite, $tab_top + 65);
+
+			if ($displayWarranty || $fournInvoices["nouveau_cumul"] != 0) {
+				$pdf->line($this->marge_gauche, $tab_top + 85, $this->page_largeur - $this->marge_droite, $tab_top + 85);
+			}
+
+
+			// ADD TEXT INTO CELL
+			/*		 * ******************** Titles ***************************** */
+			$pdf->SetXY($this->marge_gauche + 2, $tab_top + 8);
+			if (getDolGlobalBool('TIMGROUPSITUATIONANDDIRECTINVOICE_HIDETRAVAUXSUP')) {
+				$pdf->MultiCell(60, 2, 'TOTAL HT', '', 'L');
 			} else {
-				$i -= 4;
+				$pdf->MultiCell(60, 2, $outputlangs->transnoentities("SituationInvoiceMainTask"), '', 'L');
+				$pdf->SetXY($this->marge_gauche + 2, $tab_top + 12);
+				$pdf->MultiCell(60, 2, $outputlangs->transnoentities("Dont avenants, révisions de prix"), '', 'L');
 			}
-		}
 
-		$pdf->SetXY($this->marge_gauche + 2, $tab_top + 33 + $i);
-		$pdf->MultiCell(80, 2, $outputlangs->transnoentities("TotalTTC"), '', 'L');
+			$form->load_cache_vatrates("'" . $object->thirdparty->country_code . "'");
 
-		$pdf->SetFont('', 'B', $default_font_size - 1);
-		$pdf->SetXY($this->marge_gauche + 2, $tab_top + 58);
-		$pdf->MultiCell(80, 2, $outputlangs->transnoentities("TotalSituationInvoice"), '', 'L');
-		$pdf->SetFont('', '', $default_font_size - 2);
-
-		if ($displayWarranty && $fournInvoices["nouveau_cumul"] == 0) {
-			$pdf->SetXY($this->marge_gauche + 2, $tab_top + 74);
-			$pdf->MultiCell(80, 2, $outputlangs->trans("SituationInvoiceWithRetainedWarranty", (string) $object->retained_warranty), '', '');
-			$nextY = $tab_top + 93;
-		} elseif (!$displayWarranty && $fournInvoices["nouveau_cumul"] != 0) {
-			$pdf->SetXY($this->marge_gauche + 2, $tab_top + 74);
-			$pdf->MultiCell(80, 2, $outputlangs->trans("TotalDirectPayments"), '', 'L');
-			$nextY = $tab_top + 93;
-		} elseif ($displayWarranty && $fournInvoices["nouveau_cumul"] != 0) {
-			$pdf->SetXY($this->marge_gauche + 2, $tab_top + 69);
-			$pdf->MultiCell(80, 2, $outputlangs->trans("SituationInvoiceWithRetainedWarranty", (string) $object->retained_warranty), '', '');
-			// --- Direct Payments juste après le bloc précédent ---
-			$pdf->SetXY($this->marge_gauche + 2, $tab_top + 76);
-			$pdf->MultiCell(80, 2, $outputlangs->trans("TotalDirectPayments"), '', 'L');
-			$nextY = $tab_top + 93;
-		} else {
-			$nextY = $tab_top + 74;
-		}
-
-		$pdf->SetFont('', 'B', $default_font_size - 1);
-		$pdf->SetXY($this->marge_gauche + 2, $nextY);
-		$pdf->MultiCell(80, 2, $outputlangs->transnoentities("RemainderToPay"), '', 'L');
-		$pdf->SetFont('', '', $default_font_size - 2);
-
-		// mettre à jour nextY si tu as besoin d'ajouter autre chose en dessous
-		// $nextY += 19; // espace éventuel pour le prochain tableau/ligne
-		/*		 * ******************************************************** */
-
-		/*		 * ******************** Data ****************************** */
-		$TToDisplay = array(
-			'cumul_anterieur',
-			'nouveau_cumul',
-			'current'
-		);
-
-		$x = $this->marge_gauche + 85;
-		// unset($this->TDataSituation['derniere_situation']);
-		// print json_encode($object->lines);exit;
-		// print json_encode($this->TDataSituation);exit;
-		// print_r($TToDisplay); 
-		// print_r($this->TDataSituation); die();
-		foreach ($TToDisplay as $col) {
-			// Travaux principaux
-			$pdf->SetXY($x, $tab_top + 8);
-			$pdf->MultiCell(32, 2, price($this->TDataSituation[$col]['HT'], 0, '', 1, -1, 2), '', 'R');
-
-			if (!getDolGlobalBool('TIMGROUPSITUATIONANDDIRECTINVOICE_HIDETRAVAUXSUP')) {
-				// Travaux supplémentaires
-				$pdf->SetXY($x, $tab_top + 12);
-				$pdf->MultiCell(32, 2, price($this->TDataSituation[$col]['travaux_sup'], 0, '', 1, -1, 2), '', 'R');
-			}
 			$i = -8;
 			foreach ($form->cache_vatrates as $TVatInfo) {
 				$tva_tx_formated = sprintf("%01.3f", (float) $TVatInfo['txtva']);
+				// print "<p>Un taux de tva ... $tva_tx_formated :: " . json_encode($this->TDataSituation['current'][$tva_tx_formated]) . "</p>";
 				if (empty($this->TDataSituation['current'][$tva_tx_formated])) {
 					continue;
 				}
 				$i += 8;
 
-				// Total HT
-				$pdf->SetXY($x, $tab_top + 24 + $i);
-				$pdf->MultiCell(32, 2, price($this->TDataSituation[$col][$tva_tx_formated]['HT'], 0, '', 1, -1, 2), '', 'R');
+				$pdf->SetXY($this->marge_gauche + 10, $tab_top + 24 + $i);
+				$pdf->MultiCell(80, 2, $outputlangs->transnoentities("TotalHT") . ' ' . $TVatInfo['label'], '', 'L');
 
-				// Total TVA
 				if (!empty($this->TDataSituation['current'][$tva_tx_formated]['TVA'])) {
-					$pdf->SetXY($x, $tab_top + 28 + $i);
-					$pdf->MultiCell(32, 2, price($this->TDataSituation[$col][$tva_tx_formated]['TVA'], 0, '', 1, -1, 2), '', 'R');
+					$pdf->SetXY($this->marge_gauche + 10, $tab_top + 28 + $i);
+					$pdf->MultiCell(80, 2, $outputlangs->transnoentities("VAT") . ' ' . $TVatInfo['label'], '', 'L');
 				} else {
 					$i -= 4;
 				}
 			}
 
-			// Total TTC
-			$pdf->SetXY($x, $tab_top + 33 + $i);
-			$pdf->MultiCell(32, 2, price($this->TDataSituation[$col]['TTC'], 0, '', 1, -1, 2), '', 'R');
+			$pdf->SetXY($this->marge_gauche + 2, $tab_top + 33 + $i);
+			$pdf->MultiCell(80, 2, $outputlangs->transnoentities("TotalTTC"), '', 'L');
 
-			// Total situation
 			$pdf->SetFont('', 'B', $default_font_size - 1);
-			$pdf->SetXY($x, $tab_top + 58);
-			$pdf->MultiCell(32, 2, price($this->TDataSituation[$col]['TTC'], 0, '', 1, -1, 2), '', 'R');
+			$pdf->SetXY($this->marge_gauche + 2, $tab_top + 58);
+			$pdf->MultiCell(80, 2, $outputlangs->transnoentities("TotalSituationInvoice"), '', 'L');
 			$pdf->SetFont('', '', $default_font_size - 2);
 
 			if ($displayWarranty && $fournInvoices["nouveau_cumul"] == 0) {
-				// Retained warranty
-				$pdf->SetXY($x, $tab_top + 74);
-				$pdf->MultiCell(32, 2, price(-$this->TDataSituation[$col]['retenue_garantie'], 0, '', 1, -1, 2), '', 'R');
+				$pdf->SetXY($this->marge_gauche + 2, $tab_top + 74);
+				$pdf->MultiCell(80, 2, $outputlangs->trans("SituationInvoiceWithRetainedWarranty", (string) $object->retained_warranty), '', '');
 				$nextY = $tab_top + 93;
 			} elseif (!$displayWarranty && $fournInvoices["nouveau_cumul"] != 0) {
-				$pdf->SetXY($x, $tab_top + 74);
-				$pdf->MultiCell(32, 2, price($fournInvoices[$col], 0, '', 1, -1, 2), '', 'R');
+				$pdf->SetXY($this->marge_gauche + 2, $tab_top + 74);
+				$pdf->MultiCell(80, 2, $outputlangs->trans("TotalDirectPayments"), '', 'L');
 				$nextY = $tab_top + 93;
 			} elseif ($displayWarranty && $fournInvoices["nouveau_cumul"] != 0) {
-				$pdf->SetXY($x, $tab_top + 69);
-				$pdf->MultiCell(32, 2, price(-$this->TDataSituation[$col]['retenue_garantie'], 0, '', 1, -1, 2), '', 'R');
+				$pdf->SetXY($this->marge_gauche + 2, $tab_top + 69);
+				$pdf->MultiCell(80, 2, $outputlangs->trans("SituationInvoiceWithRetainedWarranty", (string) $object->retained_warranty), '', '');
 				// --- Direct Payments juste après le bloc précédent ---
-				$pdf->SetXY($x, $tab_top + 76);
-				$pdf->MultiCell(32, 2, price($fournInvoices[$col], 0, '', 1, -1, 2), '', 'R');
-				// var_dump($fournInvoices);
+				$pdf->SetXY($this->marge_gauche + 2, $tab_top + 76);
+				$pdf->MultiCell(80, 2, $outputlangs->trans("TotalDirectPayments"), '', 'L');
 				$nextY = $tab_top + 93;
 			} else {
 				$nextY = $tab_top + 74;
 			}
 
-			// Amount payable incl. VAT
 			$pdf->SetFont('', 'B', $default_font_size - 1);
-			$pdf->SetXY($x, $nextY);
-			$pdf->MultiCell(32, 2, price(($this->TDataSituation[$col]['total_a_payer'] + $fournInvoices[$col]), 0, '', 1, -1, 2), '', 'R');
+			$pdf->SetXY($this->marge_gauche + 2, $nextY);
+			$pdf->MultiCell(80, 2, $outputlangs->transnoentities("RemainderToPay"), '', 'L');
 			$pdf->SetFont('', '', $default_font_size - 2);
 
-			$x += 36;
+			// mettre à jour nextY si tu as besoin d'ajouter autre chose en dessous
+			// $nextY += 19; // espace éventuel pour le prochain tableau/ligne
+			/*		 * ******************************************************** */
+
+			/*		 * ******************** Data ****************************** */
+			$TToDisplay = array(
+				'cumul_anterieur',
+				'nouveau_cumul',
+				'current'
+			);
+
+			$x = $this->marge_gauche + 85;
+			// unset($this->TDataSituation['derniere_situation']);
+			// print json_encode($object->lines);exit;
+			// print json_encode($this->TDataSituation);exit;
+			// print_r($TToDisplay); 
+			// print_r($this->TDataSituation); die();
+			foreach ($TToDisplay as $col) {
+				// Travaux principaux
+				$pdf->SetXY($x, $tab_top + 8);
+				$pdf->MultiCell(32, 2, price($this->TDataSituation[$col]['HT'], 0, '', 1, -1, 2), '', 'R');
+
+				if (!getDolGlobalBool('TIMGROUPSITUATIONANDDIRECTINVOICE_HIDETRAVAUXSUP')) {
+					// Travaux supplémentaires
+					$pdf->SetXY($x, $tab_top + 12);
+					$pdf->MultiCell(32, 2, price($this->TDataSituation[$col]['travaux_sup'], 0, '', 1, -1, 2), '', 'R');
+				}
+				$i = -8;
+				foreach ($form->cache_vatrates as $TVatInfo) {
+					$tva_tx_formated = sprintf("%01.3f", (float) $TVatInfo['txtva']);
+					if (empty($this->TDataSituation['current'][$tva_tx_formated])) {
+						continue;
+					}
+					$i += 8;
+
+					// Total HT
+					$pdf->SetXY($x, $tab_top + 24 + $i);
+					$pdf->MultiCell(32, 2, price($this->TDataSituation[$col][$tva_tx_formated]['HT'], 0, '', 1, -1, 2), '', 'R');
+
+					// Total TVA
+					if (!empty($this->TDataSituation['current'][$tva_tx_formated]['TVA'])) {
+						$pdf->SetXY($x, $tab_top + 28 + $i);
+						$pdf->MultiCell(32, 2, price($this->TDataSituation[$col][$tva_tx_formated]['TVA'], 0, '', 1, -1, 2), '', 'R');
+					} else {
+						$i -= 4;
+					}
+				}
+
+				// Total TTC
+				$pdf->SetXY($x, $tab_top + 33 + $i);
+				$pdf->MultiCell(32, 2, price($this->TDataSituation[$col]['TTC'], 0, '', 1, -1, 2), '', 'R');
+
+				// Total situation
+				$pdf->SetFont('', 'B', $default_font_size - 1);
+				$pdf->SetXY($x, $tab_top + 58);
+				$pdf->MultiCell(32, 2, price($this->TDataSituation[$col]['TTC'], 0, '', 1, -1, 2), '', 'R');
+				$pdf->SetFont('', '', $default_font_size - 2);
+
+				if ($displayWarranty && $fournInvoices["nouveau_cumul"] == 0) {
+					// Retained warranty
+					$pdf->SetXY($x, $tab_top + 74);
+					$pdf->MultiCell(32, 2, price(-$this->TDataSituation[$col]['retenue_garantie'], 0, '', 1, -1, 2), '', 'R');
+					$nextY = $tab_top + 93;
+				} elseif (!$displayWarranty && $fournInvoices["nouveau_cumul"] != 0) {
+					$pdf->SetXY($x, $tab_top + 74);
+					$pdf->MultiCell(32, 2, price($fournInvoices[$col], 0, '', 1, -1, 2), '', 'R');
+					$nextY = $tab_top + 93;
+				} elseif ($displayWarranty && $fournInvoices["nouveau_cumul"] != 0) {
+					$pdf->SetXY($x, $tab_top + 69);
+					$pdf->MultiCell(32, 2, price(-$this->TDataSituation[$col]['retenue_garantie'], 0, '', 1, -1, 2), '', 'R');
+					// --- Direct Payments juste après le bloc précédent ---
+					$pdf->SetXY($x, $tab_top + 76);
+					$pdf->MultiCell(32, 2, price($fournInvoices[$col], 0, '', 1, -1, 2), '', 'R');
+					// var_dump($fournInvoices);
+					$nextY = $tab_top + 93;
+				} else {
+					$nextY = $tab_top + 74;
+				}
+
+				// Amount payable incl. VAT
+				$pdf->SetFont('', 'B', $default_font_size - 1);
+				$pdf->SetXY($x, $nextY);
+				$pdf->MultiCell(32, 2, price(($this->TDataSituation[$col]['total_a_payer'] + $fournInvoices[$col]), 0, '', 1, -1, 2), '', 'R');
+				$pdf->SetFont('', '', $default_font_size - 2);
+
+				$x += 36;
+			}
 		}
 		/*		 * ********************************************************* */
 	}
@@ -3563,7 +3573,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 		}
 
 		// print json_encode($facDerniereSituation->lines);exit;
-		$TDataSituation['current'] = $this->btpGetInvoiceAmounts($object->id);
+		$TDataSituation['current'] = $this->btpGetInvoiceAmounts($object->id, false, false);
 
 		if (!empty($facDerniereSituation->lines)) {
 			$TFacLinesKey = array_keys($facDerniereSituation->lines);
@@ -3583,7 +3593,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 
 		//Le nouveau cumul = cumul antérieur + current
 		$TDataSituation['nouveau_cumul'] = $this->sumSituation($TDataSituation['current'], $TDataSituation['cumul_anterieur']);
-
+		$TDataSituation ['TPreviousInvoices'] = $TPreviousInvoices;
 		return $TDataSituation;
 	}
 	
@@ -3698,37 +3708,42 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 	}
 
 	/**
-	 * Get info line of the last situation
+	 * Get info line of the last "true" situation ... ie which is not a credit note
 	 *
 	 * @param  Facture	$object		Object
 	 * @param  FactureLigne			$current_line	current line
 	 * @return void|array{progress_prec:float,total_ht_without_progress:float,total_ht:float}
 	 */
-	public function getInfosLineLastSituation(&$object, &$current_line) {
-		if (empty($object->situation_cycle_ref) || $object->situation_counter <= 1) {
+	public function getInfosLineLastSituation(Facture &$object, &$current_line) {
+		if (!$object->isSituationInvoice() || $object->situation_counter <= 1) {
+			return ['err'=>1, 'scnt' => $object->situation_counter];
 			return;
 		}
 
-		$facDerniereSituation = &$this->TDataSituation['derniere_situation'];
+//		$facDerniereSituation = &$this->TDataSituation['derniere_situation'];
+//		echo 'previd='.$current_line->fk_prev_id;print_r($facDerniereSituation); die();
+		// ça s'est un peu sioux : si jamais la précédente est un avoir, ça ne ramène rien
+		// donc on boucle sur les précédentes en commençant par la plus récente, et dès qu'on en trouve une on sort
+		foreach ($this->TDataSituation['TPreviousInvoices'] as $facDerniereSituation) {
+			// Find the previous line of the line you are on
+			foreach ($facDerniereSituation->lines as $l) {
+				if ($l->rowid == $current_line->fk_prev_id) {
+					// Recovery of total_ht without taking progress into account (for the "sums" column)
+					$ltvatx = (float) sprintf("%01.3f", $l->tva_tx);
+					$tabprice = calcul_price_total($l->qty, $l->subprice, $l->remise_percent, $ltvatx, $l->localtax1_tx, $l->localtax2_tx, 0, 'HT', $l->info_bits, $l->product_type);
+					$total_ht = $tabprice[0];
+					$total_tva = $tabprice[1];
+					$total_ttc = $tabprice[2];
+					$total_localtax1 = $tabprice[9];
+					$total_localtax2 = $tabprice[10];
+					$pu_ht = $tabprice[3];
 
-		// Find the previous line of the line you are on
-		foreach ($facDerniereSituation->lines as $l) {
-			if ($l->rowid == $current_line->fk_prev_id) {
-				// Recovery of total_ht without taking progress into account (for the "sums" column)
-				$ltvatx = (float) sprintf("%01.3f", $l->tva_tx);
-				$tabprice = calcul_price_total($l->qty, $l->subprice, $l->remise_percent, $ltvatx, $l->localtax1_tx, $l->localtax2_tx, 0, 'HT', $l->info_bits, $l->product_type);
-				$total_ht = $tabprice[0];
-				$total_tva = $tabprice[1];
-				$total_ttc = $tabprice[2];
-				$total_localtax1 = $tabprice[9];
-				$total_localtax2 = $tabprice[10];
-				$pu_ht = $tabprice[3];
-
-				return array(
-					'progress_prec' => (float) $l->situation_percent,
-					'total_ht_without_progress' => (float) $total_ht,
-					'total_ht' => $l->total_ht,
-				);
+					return array(
+						'progress_prec' => (float) $l->situation_percent,
+						'total_ht_without_progress' => (float) $total_ht,
+						'total_ht' => $l->total_ht,
+					);
+				}
 			}
 		}
 	}
@@ -3790,10 +3805,11 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 	 *
 	 * @param   int		$id					invoice id
 	 * @param   bool	$forceReadFromDB  	set to true if you want to force refresh data from SQL
+	 * @param   bool	$retderfacsituat  	set to false if you don't want to return last fact situat object in return response
 	 *
 	 * @return array{HT:float,HTnet:float,TVA:float,TTC:float,retenue_garantie:float,travaux_sup:float,total_a_payer:float,derniere_situation?:Facture,date_derniere_situation:int}
 	 */
-	public function btpGetInvoiceAmounts($id, $forceReadFromDB = false) {
+	public function btpGetInvoiceAmounts($id, $forceReadFromDB = false, $retderfacsituat = true) {
 		global $user, $langs, $mysoc, $db, $hookmanager, $nblignes;
 
 		$object = new Facture($db);
@@ -3822,9 +3838,9 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 		);
 
 		if (!empty($facDerniereSituation)) {
-			$ret['derniere_situation'] = $facDerniereSituation;
+			if ($retderfacsituat) $ret['derniere_situation'] = $facDerniereSituation;
 			$ret['date_derniere_situation'] = $facDerniereSituation->date;
-		}
+		} else $ret['date_derniere_situation'] = null;
 
 		// Scroll through the lines of the current invoice to retrieve all data
 		foreach ($object->lines as $k => $l) {
