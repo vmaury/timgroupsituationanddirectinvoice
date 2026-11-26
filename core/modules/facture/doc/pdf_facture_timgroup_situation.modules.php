@@ -801,6 +801,9 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 						if ($islinetot) {
 							$progress = '';
 						} else {
+							if (version_compare(DOL_VERSION, '23.0.0', '>=')) {
+								$conf->global->SITUATION_DISPLAY_DIFF_ON_PDF = 1; // utilisé dans pdf_getlineprogress
+							}
 							$progress = pdf_getlineprogress($object, $i, $outputlangs, $hidedetails);
 						}
 						
