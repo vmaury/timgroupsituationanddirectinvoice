@@ -959,6 +959,8 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 						$reshook = $hookmanager->executeHooks('printPDFline', $parameters, $this); // Note that $object may have been modified by hook
 
 
+						// Exclude subtotal lines (and lines of type 9) from VAT collection to avoid ghost VAT lines (reported from octopus fix #42139)
+						if ($object->lines[$i]->special_code != SUBTOTALS_SPECIAL_CODE && $object->lines[$i]->product_type != 9) {
 						$sign = 1;
 						if (isset($object->type) && $object->type == 2 && getDolGlobalString('INVOICE_POSITIVE_CREDIT_NOTE')) {
 							$sign = -1;
@@ -1026,6 +1028,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 							}
 							$this->tva_array[$vatrate . ($vatcode ? ' (' . $vatcode . ')' : '')] = array('vatrate' => $vatrate, 'vatcode' => $vatcode, 'amount' => $this->tva_array[$vatrate . ($vatcode ? ' (' . $vatcode . ')' : '')]['amount'] + $tvaligne);
 						}
+						} // end if not subtotal line
 
 						$nexY = max($nexY, $posYAfterImage);
 						
@@ -3569,9 +3572,10 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 			}
 
 			//les cumuls
+			// Note: TTC calculated on full HT (before subtracting travaux_sup) so cumulated TTC = sum of TTC of previous situation invoices (reported from octopus)
+			$TDataSituation['cumul_anterieur']['TTC'] = $TDataSituation['cumul_anterieur']['HT'] + $TDataSituation['cumul_anterieur']['TVA'];
 			$TDataSituation['cumul_anterieur']['HT'] -= $TDataSituation['cumul_anterieur']['travaux_sup'];
 			$TDataSituation['cumul_anterieur']['retenue_garantie'] = $retenue_garantie_anterieure;
-			$TDataSituation['cumul_anterieur']['TTC'] = $TDataSituation['cumul_anterieur']['HT'] + $TDataSituation['cumul_anterieur']['TVA'];
 			$TDataSituation['cumul_anterieur']['total_a_payer'] = $TDataSituation['cumul_anterieur']['TTC'] - $retenue_garantie_anterieure;
 		}
 
