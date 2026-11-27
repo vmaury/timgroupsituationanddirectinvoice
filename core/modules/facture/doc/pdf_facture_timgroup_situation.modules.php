@@ -652,12 +652,13 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 				// Loop on each lines
 				$pageposbeforeprintlines = $pdf->getPage();
 				$pagenb = $pageposbeforeprintlines;
+				$tot_up_excl_tax = $tot_qty = $tot_total_excl_tax = $tot_htwp = $tot_cpa = $tot_tcpa = $tot_tcpa2 = 0;
+
 				// Option rajout ligne pour les totaux
 				if (GETPOSTINT('disptotsbasdpage')) {
 					$object->lines[$nblines] = clone $object->lines[$nblines - 1];
 					$object->lines[$nblines]->desc = 'TOTAUX';
 					$object->lines[$nblines]->fk_product = null;
-					$tot_up_excl_tax = $tot_qty = $tot_total_excl_tax = $tot_cpa = $tot_tcpa = $tot_cpa2 = 0;
 					$nblines++;
 				}
 				for ($i = 0; $i < $nblines; $i++) {
@@ -3415,7 +3416,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 	 * @return array Tableau d'objets FactureFournisseur
 	 */
 	function getAllFournisseurInvoicesForSituations($db, $fk_project, $current_facture_id) {
-		$TAllFournInvoices = [];
+		$TAllFournInvoices = array('previous' => array(), 'current' => array());
 
 		// On récupère la facture courante pour lire son cycle et compteur
 		$sql_get = "SELECT situation_cycle_ref, situation_counter, fk_projet
@@ -3425,8 +3426,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 		$facture = $db->fetch_object($res);
 
 		// Protection au cas où il n’y a pas de facture trouvée
-		if (!$facture)
-			return [];
+		if (!$facture) return $TAllFournInvoices;
 
 		// SQL des factures précédentes + actuelle du même cycle
 		$sql_prev = "SELECT rowid
@@ -3737,11 +3737,11 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 					$ltvatx = (float) sprintf("%01.3f", $l->tva_tx);
 					$tabprice = calcul_price_total($l->qty, $l->subprice, $l->remise_percent, $ltvatx, $l->localtax1_tx, $l->localtax2_tx, 0, 'HT', $l->info_bits, $l->product_type);
 					$total_ht = $tabprice[0];
-					$total_tva = $tabprice[1];
-					$total_ttc = $tabprice[2];
-					$total_localtax1 = $tabprice[9];
-					$total_localtax2 = $tabprice[10];
-					$pu_ht = $tabprice[3];
+//					$total_tva = $tabprice[1];
+//					$total_ttc = $tabprice[2];
+//					$total_localtax1 = $tabprice[9];
+//					$total_localtax2 = $tabprice[10];
+//					$pu_ht = $tabprice[3];
 
 					return array(
 						'progress_prec' => (float) $l->situation_percent,
@@ -3857,6 +3857,9 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 			// Modification of VAT format, special case of imports or others which may have 20.0000
 			$ltvatx = (float) sprintf("%01.3f", $l->tva_tx);
 
+			if (!isset($ret[$ltvatx])) {
+				$ret[$ltvatx] = array('TVA' => 0, 'HT' => 0);
+			}
 			$ret[$ltvatx]['TVA'] += $l->total_tva;
 			$ret[$ltvatx]['HT'] += $l->total_ht;
 		}
@@ -3934,6 +3937,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 
 		$this->getPropalsAndOrders($object);
 
+		$propal_amount = 0;
 		if (count($this->propals)) {
 			$propal = array_pop($this->propals);
 
@@ -3982,6 +3986,8 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 
 		$tot_deja_regle = 0;
 		$tot_to_pay_ttc = 0;
+		$tot_creditnoteamount = 0;
+		$tot_rg = 0;
 
 		$force_to_zero = false;
 
@@ -3990,6 +3996,8 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 		
 		$previousinvoices = count($object->tab_previous_situation_invoice) ? $object->tab_previous_situation_invoice : array();
 		$previousinvoices[] = $object;
+
+		$remain_to_pay = 0;
 
 		while ($idinv < count($previousinvoices)) {
 			$invoice = $previousinvoices[$idinv];
@@ -4093,7 +4101,6 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 
 			$total_ht = (isModEnabled('multicurrency') && $invoice->multicurrency_tx != 1) ? $invoice->multicurrency_total_ht : $invoice->total_ht;
 			$total_ttc = (isModEnabled('multicurrency') && $invoice->multicurrency_tx != 1) ? $invoice->multicurrency_total_ttc : $invoice->total_ttc;
-			$tot_to_pay_ttc += $total_ttc;
 
 			// Total TTC
 			$pdf->SetXY($posx, $posy + $height * $index);
@@ -4156,7 +4163,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 			$y = 0;
 
 			// Already paid + Deposits
-			$tot_deja_regle += $deja_regle + $depositsamount;
+			// Note: totals are cumulated in the "else" branch below (no pagebreak), otherwise a pagebreak would count the invoice twice
 
 			$pdf->SetXY($posx, $posy + $height * $index);
 			$pdf->MultiCell($width, $height, $outputlangs->transnoentities("Paid"), 0, 'L', false);
@@ -4292,6 +4299,12 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 
 				$remain_to_pay -= $rem;
 
+				// Cumulate totals only when no pagebreak occurred (otherwise the invoice would be counted twice)
+				$tot_to_pay_ttc += $total_ttc;
+				$tot_deja_regle += $deja_regle + $depositsamount;
+				$tot_creditnoteamount += $creditnoteamount;
+				$tot_rg += $total_ttc_rg;
+
 				$pdf->commitTransaction();
 			}
 		}
@@ -4323,7 +4336,7 @@ class pdf_facture_timgroup_situation extends ModelePDFFactures {
 		$pdf->MultiCell($this->page_largeur - ($this->marge_droite + $this->marge_gauche), 3, $label, 0, 'L', false);
 
 		// $amount = price($remain_to_pay);
-		$amount = price($tot_to_pay_ttc - $tot_deja_regle);
+		$amount = price($tot_to_pay_ttc - $tot_deja_regle - $tot_rg - $tot_creditnoteamount);
 		$pdf->MultiCell($width2, 3, $amount, 0, 'R', false, 1, $posx + $width, $posy + 1);
 
 		$pdf->SetDrawColor(128, 128, 128);
